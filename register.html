@@ -1,102 +1,17 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Registro | SmartBook AI</title>
-    <meta name="description" content="Crea tu cuenta de SmartBook AI y activa tu prueba gratuita para automatizar la gestión contable." />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; media-src 'self'; connect-src 'self' https://app.smartbookai.es; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; upgrade-insecure-requests"
-    />
-    <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
-    <link rel="icon" type="image/png" href="assets/favicon.png" />
-    <link rel="stylesheet" href="styles.css?v=20260521-3" />
-  </head>
-  <body class="auth-page site-page">
-    <header class="navbar" id="navbar">
-      <div class="container nav-inner">
-        <a href="index.html" class="logo" aria-label="SmartBook AI - Inicio">
-          <img src="assets/smartbook-logo.png" alt="SmartBook AI" class="logo-img" height="36" />
-        </a>
-        <a href="index.html" class="nav-headmark" aria-label="SmartBook AI - Inicio">
-          <canvas class="nav-headmark-canvas" width="34" height="34" aria-hidden="true"></canvas>
-        </a>
-        <nav class="nav-links" aria-label="Enlaces principales">
-          <span class="nav-pill" aria-hidden="true"></span>
-          <a href="contacto.html" data-label="Contáctanos"><span>Contáctanos</span></a>
-          <a href="about.html" data-label="Quiénes somos"><span>Quiénes somos</span></a>
-          <a href="planes.html" data-label="Planes de suscripción"><span>Planes de suscripción</span></a>
-        </nav>
-        <div class="nav-actions">
-          <a class="btn btn-login" href="login.html" data-label="Iniciar sesión">
-            <span>Iniciar sesión</span>
-          </a>
-          <a class="btn btn-primary" href="register.html" data-label="Regístrate">
-            <span>Regístrate</span>
-          </a>
-        </div>
-      </div>
-    </header>
-
-    <main>
-      <section class="site-page-hero">
-        <div class="container site-page-hero-inner">
-          <p class="site-page-eyebrow">REGISTRO</p>
-          <h1>Crea tu cuenta</h1>
-          <p>Completa tus datos para activar tu prueba gratuita con el plan seleccionado.</p>
-        </div>
-      </section>
-
-      <section class="auth-form-section">
-        <div class="container auth-form-inner">
-          <article class="auth-form-card">
-            <h2>Datos de registro</h2>
-            <form id="form-registro" novalidate>
-              <label>
-                <span>Nombre</span>
-                <input id="name" type="text" name="nombre" autocomplete="name" minlength="2" maxlength="80" required />
-              </label>
-              <label>
-                <span>Teléfono</span>
-                <input id="phone" type="tel" name="telefono" autocomplete="tel" maxlength="30" required />
-              </label>
-              <label>
-                <span>Email</span>
-                <input id="email" type="email" name="email" autocomplete="email" maxlength="160" required />
-              </label>
-              <label id="field-password">
-                <span>Contraseña</span>
-                <input id="password" type="password" name="password" autocomplete="new-password" minlength="8" maxlength="256" required />
-              </label>
-              <p class="form-feedback" id="registro-error" data-form-feedback role="alert" aria-live="polite"></p>
-              <button class="auth-form-submit" type="submit" data-label="Crear cuenta">
-                <span>Crear cuenta</span>
-              </button>
-            </form>
-            <p class="auth-form-note">¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a>.</p>
-          </article>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <div class="container footer-inner">
-        <a href="index.html" class="logo" aria-label="SmartBook AI">
-          <img src="assets/smartbook-logo.png" alt="SmartBook AI" class="logo-img logo-footer" height="28" />
-        </a>
-        <nav aria-label="Enlaces footer">
-          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">Política de Privacidad</a>
-          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">Términos y Condiciones</a>
-          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">Cookies</a>
-          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">DPA</a>
-          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">Aviso legal</a>
-        </nav>
-        <p>© 2025 SmartBook AI</p>
-      </div>
-    </footer>
-    <script src="main.js?v=20260521-2" defer></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <title>Redirigiendo… | SmartBook AI</title>
+  <meta name="robots" content="noindex" />
+  <script>
+    var plan = new URLSearchParams(window.location.search).get("plan");
+    var url = "https://app.smartbookai.es/register/";
+    if (plan) url += "?plan=" + encodeURIComponent(plan);
+    window.location.replace(url);
+  </script>
+</head>
+<body>
+  <p>Redirigiendo… <a href="https://app.smartbookai.es/register/">Haz clic aquí si no te redirige</a></p>
+</body>
 </html>
