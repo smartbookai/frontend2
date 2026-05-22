@@ -1,6 +1,83 @@
 (() => {
   "use strict";
 
+  const FAVICON_URL = "assets/favicon.png";
+  const LOGO_URL = "assets/smartbook-logo.png";
+  const LOGO_MASK_URL = "assets/smartbook-logo-mask.png";
+  const API_BASE_URL = "https://app.smartbookai.es";
+  const DEFAULT_PLAN = "sin_plan";
+  const ALLOWED_PLAN_VALUES = new Set(["starter", "lite", "smart", "power", "ultra", DEFAULT_PLAN]);
+  const REGISTER_DRAFT_KEY = "sba_register_draft";
+  const RESEND_UNLOCK_KEY = "sba_resend_unlock_at";
+  const RESEND_COOLDOWN_MS = 3 * 60 * 1000;
+
+  const TOP_THRESHOLD = 4;
+  const BRAND_PURPLE_FALLBACK = "#6951ff";
+  const HEADMARK_SIZE = 16;
+  const REL_NOOPENER = "noopener";
+  const REL_NOREFERRER = "noreferrer";
+  const LOGO_FILE_PATTERN = /\.(?:avif|gif|jpe?g|png|svg|webp)$/i;
+  const LOGO_REPEAT_GAP = 5;
+  const DEFAULT_LOGO_URLS = [
+    "assets/logos/bhd.jpeg",
+    "assets/logos/digitallaw.png",
+    "assets/logos/lavadora.png",
+    "assets/logos/pescado.png",
+    "assets/logos/reshop.jpeg",
+    "assets/logos/rydalca.jpeg",
+  ];
+
+  const root = document.documentElement;
+  const userAgent = navigator.userAgent;
+  const isChromium = /(?:Chrome|Chromium|Edg)\//.test(userAgent) && !/Firefox\//.test(userAgent);
+  const navbar = document.querySelector(".navbar");
+  const headmarkCanvas = document.querySelector(".nav-headmark-canvas");
+  const headmarkContext = headmarkCanvas ? headmarkCanvas.getContext("2d", { willReadFrequently: true }) : null;
+  const navbarLogo = document.querySelector(".navbar .logo-img");
+  const navLinks = document.querySelector(".nav-links");
+  const navPill = navLinks ? navLinks.querySelector(".nav-pill") : null;
+  const navItems = navLinks ? [...navLinks.querySelectorAll("a")].filter((link) => link !== navPill) : [];
+  const revealElements = [...document.querySelectorAll(".reveal")];
+  const videoModal = document.querySelector("#hero-video-modal");
+  const videoModalOpenItems = [...document.querySelectorAll("[data-video-modal-open]")];
+  const videoModalCloseItems = [...document.querySelectorAll("[data-video-modal-close]")];
+  const videoModalPlayer = videoModal ? videoModal.querySelector(".video-modal-player") : null;
+  const videoModalCloseButton = videoModal ? videoModal.querySelector(".video-modal-close") : null;
+  const invoiceInfoModal = document.querySelector("#invoice-info-modal");
+  const invoiceInfoOpenItems = [...document.querySelectorAll("[data-invoice-info-open]")];
+  const invoiceInfoCloseItems = [...document.querySelectorAll("[data-invoice-info-close]")];
+  const invoiceInfoCloseButton = invoiceInfoModal ? invoiceInfoModal.querySelector(".invoice-info-close") : null;
+  const verifactuInfoModal = document.querySelector("#verifactu-info-modal");
+  const verifactuInfoOpenItems = [...document.querySelectorAll("[data-verifactu-info-open]")];
+  const verifactuInfoCloseItems = [...document.querySelectorAll("[data-verifactu-info-close]")];
+  const verifactuInfoCloseButton = verifactuInfoModal ? verifactuInfoModal.querySelector(".invoice-info-close") : null;
+  const successStoryModal = document.querySelector("#success-story-modal");
+  const successStoryOpenItems = [...document.querySelectorAll("[data-success-story-open]")];
+  const successStoryCloseItems = [...document.querySelectorAll("[data-success-story-close]")];
+  const successStoryCloseButton = successStoryModal ? successStoryModal.querySelector(".invoice-info-close") : null;
+  const logoMarquee = document.querySelector(".logo-marquee");
+  const logoMarqueeTrack = logoMarquee ? logoMarquee.querySelector(".logo-marquee-track") : null;
+  const frontendForms = [...document.querySelectorAll("[data-frontend-form]")];
+  const frontendPlaceholderLinks = [...document.querySelectorAll("[data-frontend-placeholder]")];
+  const confirmEmail = document.querySelector("#confirm-email");
+  const resendButton = document.querySelector("#btn-resend");
+  const resendButtonLabel = document.querySelector("#btn-resend-label");
+  const resendFeedback = document.querySelector("#resend-feedback");
+  const loginForm = document.querySelector("#form-login");
+  const registerForm = document.querySelector("#form-registro");
+
+  let activeNavLink = null;
+  let layoutFrame = null;
+  let videoModalReturnFocus = null;
+  let invoiceInfoReturnFocus = null;
+  let verifactuInfoReturnFocus = null;
+  let successStoryReturnFocus = null;
+  let logoMarqueeFrame = null;
+  let logoMarqueeOffset = 0;
+  let logoMarqueeLastTime = 0;
+
+  root.classList.toggle("is-chromium", isChromium);
+
   if ("scrollRestoration" in history) {
     history.scrollRestoration = "manual";
   }
@@ -8,91 +85,9 @@
   const navEntries = typeof performance.getEntriesByType === "function"
     ? performance.getEntriesByType("navigation")
     : [];
-  const isReload = navEntries.length > 0 && navEntries[0].type === "reload";
-  if (isReload) {
+  if (navEntries.length > 0 && navEntries[0].type === "reload") {
     window.scrollTo(0, 0);
   }
-
-  const navbar = document.getElementById("navbar");
-  const headmarkCanvas = document.querySelector(".nav-headmark-canvas");
-  const headmarkCtx = headmarkCanvas ? headmarkCanvas.getContext("2d", { willReadFrequently: true }) : null;
-  const navbarLogo = document.querySelector(".navbar .logo-img");
-  const navLinks = document.querySelector(".nav-links");
-  const navPill = navLinks ? navLinks.querySelector(".nav-pill") : null;
-  const navItems = navLinks ? Array.from(navLinks.querySelectorAll("a")) : [];
-  const revealElements = document.querySelectorAll(".reveal");
-  const heroStage = document.getElementById("hero-stage");
-  const contactForm = document.querySelector(".contact-form");
-  const shareLinks = document.querySelectorAll("[data-share-network]");
-  const lockedVideos = document.querySelectorAll("[data-locked-video]");
-  const revealPlaybackVideos = document.querySelectorAll("[data-play-after-reveal]");
-
-  const API_BASE_URL = "http://127.0.0.1:8080";
-  const TOP_THRESHOLD = 4;
-  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const PHONE_REGEX = /^[0-9+\s-]+$/;
-  const PASSWORD_MIN_LENGTH = 8;
-  const PASSWORD_MAX_LENGTH = 256;
-  const DEFAULT_REDIRECT = "/dashboard/";
-  const DEFAULT_PLAN = "sin_plan";
-  const ALLOWED_PLAN_VALUES = new Set(["starter", "lite", "smart", "power", "ultra", DEFAULT_PLAN]);
-  const REL_NOOPENER = "noopener";
-  const REL_NOREFERRER = "noreferrer";
-  const BRAND_PURPLE_FALLBACK = { r: 93, g: 48, b: 133 };
-  const HEADMARK_SIZE = 34;
-  const topOnlyNavPill = document.body.classList.contains("legal-page");
-
-  let isAtTop = window.scrollY <= TOP_THRESHOLD;
-  let lastScrollY = window.scrollY;
-  let scrollDirection = "down";
-  let isLayoutFrameQueued = false;
-  let isResizeFrameQueued = false;
-
-  const apiUrl = (path) => `${API_BASE_URL}${path}`;
-
-  const normalizeText = (value) => String(value ?? "").trim();
-
-  const normalizeEmail = (value) => normalizeText(value).toLowerCase();
-
-  const isValidEmail = (value) => EMAIL_REGEX.test(normalizeEmail(value));
-
-  const isValidPassword = (value) => {
-    const password = String(value ?? "");
-    return password.length >= PASSWORD_MIN_LENGTH && password.length <= PASSWORD_MAX_LENGTH;
-  };
-
-  const isValidPhone = (value) => {
-    const phone = normalizeText(value);
-    return phone.length > 0 && phone.length <= 30 && PHONE_REGEX.test(phone);
-  };
-
-  const normalizePlan = (value) => {
-    const plan = normalizeText(value || DEFAULT_PLAN).toLowerCase();
-    return ALLOWED_PLAN_VALUES.has(plan) ? plan : DEFAULT_PLAN;
-  };
-
-  const safeInternalRedirect = (redirect) => {
-    if (typeof redirect !== "string" || redirect.trim() === "") return DEFAULT_REDIRECT;
-
-    try {
-      const url = new URL(redirect, window.location.origin);
-      if (url.origin !== window.location.origin) return DEFAULT_REDIRECT;
-      if (!url.pathname.startsWith("/")) return DEFAULT_REDIRECT;
-      return `${url.pathname}${url.search}${url.hash}`;
-    } catch {
-      return DEFAULT_REDIRECT;
-    }
-  };
-
-  const setSvgIcon = (svg, elements) => {
-    if (!svg) return;
-    svg.replaceChildren();
-    elements.forEach(({ tag, attrs }) => {
-      const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
-      Object.entries(attrs).forEach(([name, value]) => node.setAttribute(name, value));
-      svg.appendChild(node);
-    });
-  };
 
   const parseHexToRgb = (rawHex) => {
     const hex = String(rawHex ?? "").trim().replace(/^#/, "");
@@ -104,987 +99,1091 @@
     };
   };
 
-  const accentColor = parseHexToRgb(
-    getComputedStyle(document.documentElement).getPropertyValue("--accent")
-  ) ?? BRAND_PURPLE_FALLBACK;
+  const accentColor = () => parseHexToRgb(
+    getComputedStyle(root).getPropertyValue("--accent") || BRAND_PURPLE_FALLBACK
+  ) ?? parseHexToRgb(BRAND_PURPLE_FALLBACK);
 
   const paintHeadmarkPurple = () => {
-    if (!headmarkCtx || !headmarkCanvas) return;
+    if (!headmarkContext || !headmarkCanvas) return;
 
-    const img = new Image();
-    img.decoding = "async";
-    img.src = "favicon.png";
-    img.addEventListener("load", () => {
-      const off = document.createElement("canvas");
-      off.width = HEADMARK_SIZE;
-      off.height = HEADMARK_SIZE;
-      const offCtx = off.getContext("2d", { willReadFrequently: true });
-      if (!offCtx) return;
+    const color = accentColor();
+    if (!color) return;
 
-      offCtx.clearRect(0, 0, HEADMARK_SIZE, HEADMARK_SIZE);
-      offCtx.drawImage(img, 0, 0, HEADMARK_SIZE, HEADMARK_SIZE);
+    const favicon = new Image();
+    favicon.decoding = "async";
+    favicon.addEventListener("load", () => {
+      const offscreen = document.createElement("canvas");
+      offscreen.width = HEADMARK_SIZE;
+      offscreen.height = HEADMARK_SIZE;
+      const offscreenContext = offscreen.getContext("2d", { willReadFrequently: true });
+      if (!offscreenContext) return;
 
-      const data = offCtx.getImageData(0, 0, HEADMARK_SIZE, HEADMARK_SIZE);
-      const px = data.data;
-      for (let i = 0; i < px.length; i += 4) {
-        if (px[i + 3] < 8) continue;
-        px[i] = accentColor.r;
-        px[i + 1] = accentColor.g;
-        px[i + 2] = accentColor.b;
+      offscreenContext.clearRect(0, 0, HEADMARK_SIZE, HEADMARK_SIZE);
+      offscreenContext.drawImage(favicon, 0, 0, HEADMARK_SIZE, HEADMARK_SIZE);
+      const imageData = offscreenContext.getImageData(0, 0, HEADMARK_SIZE, HEADMARK_SIZE);
+      const { data } = imageData;
+
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 0) {
+          data[i] = color.r;
+          data[i + 1] = color.g;
+          data[i + 2] = color.b;
+        }
       }
-      headmarkCtx.putImageData(data, 0, 0);
-    }, { once: true });
+
+      offscreenContext.putImageData(imageData, 0, 0);
+      headmarkContext.clearRect(0, 0, headmarkCanvas.width, headmarkCanvas.height);
+      headmarkContext.drawImage(offscreen, 0, 0, headmarkCanvas.width, headmarkCanvas.height);
+    });
+    favicon.src = FAVICON_URL;
   };
 
   const clearNavPill = () => {
-    if (!navLinks) return;
-    navLinks.classList.remove("is-flow");
+    if (!navPill) return;
+    activeNavLink = null;
+    navLinks?.classList.remove("is-flow");
     navItems.forEach((item) => item.classList.remove("is-pill-active"));
+    navPill.style.setProperty("--pill-x", "0px");
+    navPill.style.setProperty("--pill-y", "0px");
+    navPill.style.opacity = "0";
+    navPill.style.width = "0px";
+    navPill.style.height = "0px";
+  };
 
-    if (topOnlyNavPill && navPill) {
-      navPill.style.width = "0";
-      navPill.style.height = "0";
-      navPill.style.opacity = "0";
+  const setActiveNavPill = (link, instant = false) => {
+    if (!navPill || !link || !navLinks) return;
+    if (!navLinks.contains(link)) {
+      clearNavPill();
+      return;
+    }
+
+    const navRect = navLinks.getBoundingClientRect();
+    const linkRect = link.getBoundingClientRect();
+
+    if (linkRect.width <= 0 || linkRect.height <= 0) {
+      clearNavPill();
+      return;
+    }
+
+    navItems.forEach((item) => item.classList.toggle("is-pill-active", item === link));
+    navLinks.classList.add("is-flow");
+    navPill.style.setProperty("--pill-x", `${linkRect.left - navRect.left}px`);
+    navPill.style.setProperty("--pill-y", `${linkRect.top - navRect.top}px`);
+    navPill.style.width = `${linkRect.width}px`;
+    navPill.style.height = `${linkRect.height}px`;
+    navPill.style.opacity = "1";
+    navPill.classList.toggle("no-transition", instant);
+    activeNavLink = link;
+
+    if (instant) {
+      requestAnimationFrame(() => navPill.classList.remove("no-transition"));
     }
   };
 
   const setNavbarState = () => {
     if (!navbar) return;
 
-    isAtTop = window.scrollY <= TOP_THRESHOLD;
+    const isAtTop = window.scrollY <= TOP_THRESHOLD;
     navbar.classList.toggle("scrolled", !isAtTop);
 
     if (navbarLogo) {
-      const targetLogo = isAtTop ? "logo.png" : "logo-purple.png";
-      if (!navbarLogo.getAttribute("src")?.endsWith(targetLogo)) {
+      const targetLogo = isAtTop ? LOGO_URL : LOGO_MASK_URL;
+      if (navbarLogo.getAttribute("src") !== targetLogo) {
         navbarLogo.setAttribute("src", targetLogo);
       }
     }
 
-    if (!isAtTop) clearNavPill();
-  };
-
-  const setActiveNavPill = (link, instant = false) => {
-    if (!navLinks || !navPill || !link) return;
-
-    const navRect = navLinks.getBoundingClientRect();
-    const linkRect = link.getBoundingClientRect();
-    const x = linkRect.left - navRect.left;
-    const y = linkRect.top - navRect.top;
-
-    if (instant) {
-      const prevTransition = navPill.style.transition;
-      navPill.style.transition = "none";
-      navPill.style.width = `${linkRect.width}px`;
-      navPill.style.height = `${linkRect.height}px`;
-      navPill.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-      navPill.getBoundingClientRect();
-      navPill.style.transition = prevTransition;
-    } else {
-      navPill.style.width = `${linkRect.width}px`;
-      navPill.style.height = `${linkRect.height}px`;
-      navPill.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    if (activeNavLink) {
+      setActiveNavPill(activeNavLink, true);
     }
-
-    if (topOnlyNavPill) {
-      navPill.style.opacity = isAtTop ? "1" : "0";
-    }
-
-    navLinks.classList.add("is-flow");
-    navItems.forEach((item) => {
-      item.classList.toggle("is-pill-active", item === link);
-    });
-  };
-
-  const clamp01 = (value) => Math.max(0, Math.min(1, value));
-
-  const updateHeroScrollState = () => {
-    if (!heroStage) return;
-    const rect = heroStage.getBoundingClientRect();
-    const total = Math.max(1, rect.height - window.innerHeight);
-    const traveled = clamp01(-rect.top / total);
-    const textAlpha = clamp01((traveled - 0.06) / 0.52);
-    const videoAlpha = 1 - clamp01((traveled - 0.2) / 0.65);
-    heroStage.style.setProperty("--hero-text-alpha", textAlpha.toFixed(3));
-    heroStage.style.setProperty("--hero-video-alpha", videoAlpha.toFixed(3));
-  };
-
-  const runLayoutUpdate = () => {
-    isLayoutFrameQueued = false;
-    setNavbarState();
-    updateHeroScrollState();
   };
 
   const queueLayoutUpdate = () => {
-    if (isLayoutFrameQueued) return;
-    isLayoutFrameQueued = true;
-    window.requestAnimationFrame(runLayoutUpdate);
-  };
-
-  const showWithoutFade = (element) => {
-    element.classList.add("no-transition");
-    element.classList.add("is-visible");
-    window.requestAnimationFrame(() => {
-      element.classList.remove("no-transition");
+    if (layoutFrame) return;
+    layoutFrame = requestAnimationFrame(() => {
+      layoutFrame = null;
+      setNavbarState();
     });
   };
 
-  const playRevealVideos = (element) => {
-    const videos = element.querySelectorAll("[data-play-after-reveal]");
-    if (videos.length === 0) return;
+  const initRevealAnimations = () => {
+    if (!revealElements.length) return;
 
-    videos.forEach((video) => {
-      video.dataset.revealReady = "true";
-      video.play().catch(() => {});
-    });
-  };
-
-  const playRevealVideosAfterTransition = (element) => {
-    const videos = element.querySelectorAll("[data-play-after-reveal]");
-    if (videos.length === 0 || element.dataset.revealPlaybackStarted === "true") return;
-
-    element.dataset.revealPlaybackStarted = "true";
-
-    if (element.classList.contains("no-transition")) {
-      playRevealVideos(element);
+    if (!("IntersectionObserver" in window)) {
+      revealElements.forEach((element) => element.classList.add("is-visible"));
       return;
     }
 
-    const startPlayback = () => playRevealVideos(element);
-    const fallbackId = window.setTimeout(startPlayback, 900);
-
-    const handleTransitionEnd = (event) => {
-      if (event.target !== element || event.propertyName !== "opacity") return;
-      window.clearTimeout(fallbackId);
-      element.removeEventListener("transitionend", handleTransitionEnd);
-      startPlayback();
-    };
-
-    element.addEventListener("transitionend", handleTransitionEnd);
-  };
-
-  const sanitizeForMailto = (value, maxLength) => {
-    const normalized = String(value ?? "")
-      .replace(/[\u0000-\u001f\u007f]+/g, " ")
-      .trim();
-    return typeof maxLength === "number" ? normalized.slice(0, maxLength) : normalized;
-  };
-
-  const CONTACT_PHONE_COUNTRIES = [
-    ["🇦🇫", "Afganistan", "+93"],
-    ["🇦🇱", "Albania", "+355"],
-    ["🇩🇪", "Alemania", "+49"],
-    ["🇦🇩", "Andorra", "+376"],
-    ["🇦🇴", "Angola", "+244"],
-    ["🇦🇬", "Antigua y Barbuda", "+1-268"],
-    ["🇸🇦", "Arabia Saudita", "+966"],
-    ["🇩🇿", "Argelia", "+213"],
-    ["🇦🇷", "Argentina", "+54"],
-    ["🇦🇲", "Armenia", "+374"],
-    ["🇦🇺", "Australia", "+61"],
-    ["🇦🇹", "Austria", "+43"],
-    ["🇦🇿", "Azerbaiyan", "+994"],
-    ["🇧🇸", "Bahamas", "+1-242"],
-    ["🇧🇭", "Barein", "+973"],
-    ["🇧🇩", "Banglades", "+880"],
-    ["🇧🇧", "Barbados", "+1-246"],
-    ["🇧🇪", "Belgica", "+32"],
-    ["🇧🇿", "Belice", "+501"],
-    ["🇧🇯", "Benin", "+229"],
-    ["🇧🇾", "Bielorrusia", "+375"],
-    ["🇧🇴", "Bolivia", "+591"],
-    ["🇧🇦", "Bosnia y Herzegovina", "+387"],
-    ["🇧🇼", "Botsuana", "+267"],
-    ["🇧🇷", "Brasil", "+55"],
-    ["🇧🇳", "Brunei", "+673"],
-    ["🇧🇬", "Bulgaria", "+359"],
-    ["🇧🇫", "Burkina Faso", "+226"],
-    ["🇧🇮", "Burundi", "+257"],
-    ["🇧🇹", "Butan", "+975"],
-    ["🇨🇻", "Cabo Verde", "+238"],
-    ["🇰🇭", "Camboya", "+855"],
-    ["🇨🇲", "Camerun", "+237"],
-    ["🇨🇦", "Canada", "+1"],
-    ["🇶🇦", "Catar", "+974"],
-    ["🇹🇩", "Chad", "+235"],
-    ["🇨🇱", "Chile", "+56"],
-    ["🇨🇳", "China", "+86"],
-    ["🇨🇾", "Chipre", "+357"],
-    ["🇨🇴", "Colombia", "+57"],
-    ["🇰🇲", "Comoras", "+269"],
-    ["🇰🇵", "Corea del Norte", "+850"],
-    ["🇰🇷", "Corea del Sur", "+82"],
-    ["🇨🇮", "Costa de Marfil", "+225"],
-    ["🇨🇷", "Costa Rica", "+506"],
-    ["🇭🇷", "Croacia", "+385"],
-    ["🇨🇺", "Cuba", "+53"],
-    ["🇩🇰", "Dinamarca", "+45"],
-    ["🇩🇲", "Dominica", "+1-767"],
-    ["🇪🇨", "Ecuador", "+593"],
-    ["🇪🇬", "Egipto", "+20"],
-    ["🇸🇻", "El Salvador", "+503"],
-    ["🇦🇪", "Emiratos Arabes Unidos", "+971"],
-    ["🇪🇷", "Eritrea", "+291"],
-    ["🇸🇰", "Eslovaquia", "+421"],
-    ["🇸🇮", "Eslovenia", "+386"],
-    ["🇪🇸", "España", "+34"],
-    ["🇺🇸", "Estados Unidos", "+1"],
-    ["🇪🇪", "Estonia", "+372"],
-    ["🇸🇿", "Esuatini", "+268"],
-    ["🇪🇹", "Etiopia", "+251"],
-    ["🇵🇭", "Filipinas", "+63"],
-    ["🇫🇮", "Finlandia", "+358"],
-    ["🇫🇯", "Fiyi", "+679"],
-    ["🇫🇷", "Francia", "+33"],
-    ["🇬🇦", "Gabon", "+241"],
-    ["🇬🇲", "Gambia", "+220"],
-    ["🇬🇪", "Georgia", "+995"],
-    ["🇬🇭", "Ghana", "+233"],
-    ["🇬🇩", "Granada", "+1-473"],
-    ["🇬🇷", "Grecia", "+30"],
-    ["🇬🇹", "Guatemala", "+502"],
-    ["🇬🇳", "Guinea", "+224"],
-    ["🇬🇶", "Guinea Ecuatorial", "+240"],
-    ["🇬🇼", "Guinea-Bisau", "+245"],
-    ["🇬🇾", "Guyana", "+592"],
-    ["🇭🇹", "Haiti", "+509"],
-    ["🇭🇳", "Honduras", "+504"],
-    ["🇭🇺", "Hungria", "+36"],
-    ["🇮🇳", "India", "+91"],
-    ["🇮🇩", "Indonesia", "+62"],
-    ["🇮🇶", "Irak", "+964"],
-    ["🇮🇷", "Iran", "+98"],
-    ["🇮🇪", "Irlanda", "+353"],
-    ["🇮🇸", "Islandia", "+354"],
-    ["🇲🇭", "Islas Marshall", "+692"],
-    ["🇸🇧", "Islas Salomon", "+677"],
-    ["🇮🇱", "Israel", "+972"],
-    ["🇮🇹", "Italia", "+39"],
-    ["🇯🇲", "Jamaica", "+1-876"],
-    ["🇯🇵", "Japon", "+81"],
-    ["🇯🇴", "Jordania", "+962"],
-    ["🇰🇿", "Kazajistan", "+7"],
-    ["🇰🇪", "Kenia", "+254"],
-    ["🇰🇬", "Kirguistan", "+996"],
-    ["🇰🇮", "Kiribati", "+686"],
-    ["🇽🇰", "Kosovo", "+383"],
-    ["🇰🇼", "Kuwait", "+965"],
-    ["🇱🇦", "Laos", "+856"],
-    ["🇱🇸", "Lesoto", "+266"],
-    ["🇱🇻", "Letonia", "+371"],
-    ["🇱🇧", "Libano", "+961"],
-    ["🇱🇷", "Liberia", "+231"],
-    ["🇱🇾", "Libia", "+218"],
-    ["🇱🇮", "Liechtenstein", "+423"],
-    ["🇱🇹", "Lituania", "+370"],
-    ["🇱🇺", "Luxemburgo", "+352"],
-    ["🇲🇰", "Macedonia del Norte", "+389"],
-    ["🇲🇬", "Madagascar", "+261"],
-    ["🇲🇾", "Malasia", "+60"],
-    ["🇲🇼", "Malaui", "+265"],
-    ["🇲🇻", "Maldivas", "+960"],
-    ["🇲🇱", "Mali", "+223"],
-    ["🇲🇹", "Malta", "+356"],
-    ["🇲🇦", "Marruecos", "+212"],
-    ["🇲🇺", "Mauricio", "+230"],
-    ["🇲🇷", "Mauritania", "+222"],
-    ["🇲🇽", "Mexico", "+52"],
-    ["🇫🇲", "Micronesia", "+691"],
-    ["🇲🇩", "Moldavia", "+373"],
-    ["🇲🇨", "Monaco", "+377"],
-    ["🇲🇳", "Mongolia", "+976"],
-    ["🇲🇪", "Montenegro", "+382"],
-    ["🇲🇿", "Mozambique", "+258"],
-    ["🇲🇲", "Myanmar", "+95"],
-    ["🇳🇦", "Namibia", "+264"],
-    ["🇳🇷", "Nauru", "+674"],
-    ["🇳🇵", "Nepal", "+977"],
-    ["🇳🇮", "Nicaragua", "+505"],
-    ["🇳🇪", "Niger", "+227"],
-    ["🇳🇬", "Nigeria", "+234"],
-    ["🇳🇴", "Noruega", "+47"],
-    ["🇳🇿", "Nueva Zelanda", "+64"],
-    ["🇴🇲", "Oman", "+968"],
-    ["🇳🇱", "Paises Bajos", "+31"],
-    ["🇵🇰", "Pakistan", "+92"],
-    ["🇵🇼", "Palaos", "+680"],
-    ["🇵🇸", "Palestina", "+970"],
-    ["🇵🇦", "Panama", "+507"],
-    ["🇵🇬", "Papua Nueva Guinea", "+675"],
-    ["🇵🇾", "Paraguay", "+595"],
-    ["🇵🇪", "Peru", "+51"],
-    ["🇵🇱", "Polonia", "+48"],
-    ["🇵🇹", "Portugal", "+351"],
-    ["🇬🇧", "Reino Unido", "+44"],
-    ["🇨🇫", "Republica Centroafricana", "+236"],
-    ["🇨🇿", "Republica Checa", "+420"],
-    ["🇨🇬", "Republica del Congo", "+242"],
-    ["🇨🇩", "Republica Democratica del Congo", "+243"],
-    ["🇩🇴", "Republica Dominicana", "+1-809"],
-    ["🇷🇼", "Ruanda", "+250"],
-    ["🇷🇴", "Rumania", "+40"],
-    ["🇷🇺", "Rusia", "+7"],
-    ["🇼🇸", "Samoa", "+685"],
-    ["🇰🇳", "San Cristobal y Nieves", "+1-869"],
-    ["🇸🇲", "San Marino", "+378"],
-    ["🇻🇨", "San Vicente y las Granadinas", "+1-784"],
-    ["🇱🇨", "Santa Lucia", "+1-758"],
-    ["🇸🇹", "Santo Tome y Principe", "+239"],
-    ["🇸🇳", "Senegal", "+221"],
-    ["🇷🇸", "Serbia", "+381"],
-    ["🇸🇨", "Seychelles", "+248"],
-    ["🇸🇱", "Sierra Leona", "+232"],
-    ["🇸🇬", "Singapur", "+65"],
-    ["🇸🇾", "Siria", "+963"],
-    ["🇸🇴", "Somalia", "+252"],
-    ["🇱🇰", "Sri Lanka", "+94"],
-    ["🇿🇦", "Sudafrica", "+27"],
-    ["🇸🇩", "Sudan", "+249"],
-    ["🇸🇸", "Sudan del Sur", "+211"],
-    ["🇸🇪", "Suecia", "+46"],
-    ["🇨🇭", "Suiza", "+41"],
-    ["🇸🇷", "Surinam", "+597"],
-    ["🇹🇭", "Tailandia", "+66"],
-    ["🇹🇼", "Taiwan", "+886"],
-    ["🇹🇿", "Tanzania", "+255"],
-    ["🇹🇯", "Tayikistan", "+992"],
-    ["🇹🇱", "Timor Oriental", "+670"],
-    ["🇹🇬", "Togo", "+228"],
-    ["🇹🇴", "Tonga", "+676"],
-    ["🇹🇹", "Trinidad y Tobago", "+1-868"],
-    ["🇹🇳", "Tunez", "+216"],
-    ["🇹🇲", "Turkmenistan", "+993"],
-    ["🇹🇷", "Turquia", "+90"],
-    ["🇹🇻", "Tuvalu", "+688"],
-    ["🇺🇦", "Ucrania", "+380"],
-    ["🇺🇬", "Uganda", "+256"],
-    ["🇺🇾", "Uruguay", "+598"],
-    ["🇺🇿", "Uzbekistan", "+998"],
-    ["🇻🇺", "Vanuatu", "+678"],
-    ["🇻🇦", "Vaticano", "+379"],
-    ["🇻🇪", "Venezuela", "+58"],
-    ["🇻🇳", "Vietnam", "+84"],
-    ["🇾🇪", "Yemen", "+967"],
-    ["🇩🇯", "Yibuti", "+253"],
-    ["🇿🇲", "Zambia", "+260"],
-    ["🇿🇼", "Zimbabue", "+263"],
-  ].sort((a, b) => a[1].localeCompare(b[1], "es", { sensitivity: "base" }));
-
-  const initContactPhoneField = () => {
-    const phoneField = document.querySelector("[data-contact-phone]");
-    if (!phoneField) return;
-
-    const prefixButton = phoneField.querySelector(".contact-phone-prefix-button");
-    const prefixFlag = phoneField.querySelector(".contact-phone-prefix-flag");
-    const prefixCode = phoneField.querySelector(".contact-phone-prefix-code");
-    const numberInput = phoneField.querySelector(".contact-phone-number");
-    const hiddenInput = phoneField.querySelector('input[name="phone"]');
-    const dropdown = phoneField.querySelector(".contact-phone-dropdown");
-    if (!prefixButton || !prefixFlag || !prefixCode || !numberInput || !hiddenInput || !dropdown) return;
-
-    let selectedCountry = CONTACT_PHONE_COUNTRIES.find((country) => country[1] === "España") || CONTACT_PHONE_COUNTRIES[0];
-
-    const updateHiddenPhone = () => {
-      const number = String(numberInput.value || "").trim();
-      hiddenInput.value = number ? `${selectedCountry[2]} ${number}` : "";
-    };
-
-    const setCountry = (country) => {
-      selectedCountry = country;
-      prefixFlag.textContent = country[0];
-      prefixCode.textContent = country[2];
-      dropdown.querySelectorAll(".contact-phone-option").forEach((option) => {
-        const isSelected = option.dataset.code === country[2] && option.dataset.country === country[1];
-        option.classList.toggle("is-selected", isSelected);
-        option.setAttribute("aria-selected", String(isSelected));
+    const observer = new IntersectionObserver((entries, instance) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        instance.unobserve(entry.target);
       });
-      updateHiddenPhone();
-    };
+    }, { threshold: 0.2 });
 
-    const closeDropdown = () => {
-      dropdown.hidden = true;
-      prefixButton.setAttribute("aria-expanded", "false");
-    };
-
-    const openDropdown = () => {
-      dropdown.hidden = false;
-      prefixButton.setAttribute("aria-expanded", "true");
-    };
-
-    const toggleDropdown = () => {
-      if (dropdown.hidden) {
-        openDropdown();
-      } else {
-        closeDropdown();
-      }
-    };
-
-    CONTACT_PHONE_COUNTRIES.forEach((country) => {
-      const option = document.createElement("button");
-      option.type = "button";
-      option.className = "contact-phone-option";
-      option.setAttribute("role", "option");
-      option.dataset.country = country[1];
-      option.dataset.code = country[2];
-      option.innerHTML = `
-        <span class="contact-phone-option-flag" aria-hidden="true">${country[0]}</span>
-        <span class="contact-phone-option-name">${country[1]}</span>
-        <span class="contact-phone-option-code">${country[2]}</span>
-      `;
-      option.addEventListener("click", () => {
-        setCountry(country);
-        closeDropdown();
-        numberInput.focus();
-      });
-      dropdown.appendChild(option);
-    });
-
-    prefixButton.addEventListener("click", toggleDropdown);
-
-    numberInput.addEventListener("input", () => {
-      numberInput.value = numberInput.value.replace(/[^\d\s-]/g, "");
-      updateHiddenPhone();
-    });
-
-    phoneField.closest("form")?.addEventListener("submit", updateHiddenPhone);
-
-    document.addEventListener("click", (event) => {
-      if (!phoneField.contains(event.target)) closeDropdown();
-    });
-
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeDropdown();
-    });
-
-    setCountry(selectedCountry);
-    closeDropdown();
+    revealElements.forEach((element) => observer.observe(element));
   };
 
   const hardenBlankTargetLinks = () => {
-    const externalLinks = document.querySelectorAll('a[target="_blank"]');
-    if (externalLinks.length === 0) return;
-
-    externalLinks.forEach((link) => {
-      const currentRel = (link.getAttribute("rel") || "")
-        .split(/\s+/)
-        .map((token) => token.trim().toLowerCase())
-        .filter(Boolean);
-      const relSet = new Set(currentRel);
-      relSet.add(REL_NOOPENER);
-      relSet.add(REL_NOREFERRER);
-      link.setAttribute("rel", Array.from(relSet).join(" "));
+    document.querySelectorAll('a[target="_blank"]').forEach((link) => {
+      const relValues = new Set((link.getAttribute("rel") || "").split(/\s+/).filter(Boolean));
+      relValues.add(REL_NOOPENER);
+      relValues.add(REL_NOREFERRER);
+      link.setAttribute("rel", [...relValues].join(" "));
     });
   };
 
-  const hydrateShareLinks = () => {
-    if (shareLinks.length === 0) return;
+  const showFrontendToast = (message) => {
+    let toast = document.querySelector("[data-frontend-toast]");
+    if (!toast) {
+      toast = document.createElement("p");
+      toast.className = "frontend-toast";
+      toast.dataset.frontendToast = "";
+      toast.setAttribute("role", "status");
+      toast.setAttribute("aria-live", "polite");
+      document.body.append(toast);
+    }
 
-    const articleUrl = encodeURIComponent(window.location.href);
-    const articleTitle = encodeURIComponent(document.title.replace(/\s*\|\s*SmartBook AI\s*$/, ""));
-
-    shareLinks.forEach((link) => {
-      const network = link.getAttribute("data-share-network");
-      if (network === "facebook") {
-        link.href = `https://www.facebook.com/sharer/sharer.php?u=${articleUrl}`;
-      }
-      if (network === "x") {
-        link.href = `https://twitter.com/intent/tweet?url=${articleUrl}&text=${articleTitle}`;
-      }
-    });
+    toast.textContent = message;
+    toast.classList.add("is-visible");
+    window.clearTimeout(showFrontendToast.timer);
+    showFrontendToast.timer = window.setTimeout(() => {
+      toast.classList.remove("is-visible");
+    }, 3600);
   };
 
-  const lockVideos = () => {
-    if (lockedVideos.length === 0) return;
+  const setFieldState = (field, message = "") => {
+    if (!field) return;
 
-    lockedVideos.forEach((video) => {
-      video.controls = false;
-      video.removeAttribute("controls");
-      video.setAttribute("disablepictureinpicture", "");
-      video.setAttribute("controlslist", "nodownload nofullscreen noremoteplayback");
+    field.setCustomValidity(message);
+    field.toggleAttribute("aria-invalid", Boolean(message));
+    const phoneControl = field.closest(".contact-page-phone-control");
+    if (phoneControl) {
+      phoneControl.classList.toggle("field-invalid", Boolean(message));
+    }
+  };
 
-      video.addEventListener("contextmenu", (event) => event.preventDefault());
-      video.addEventListener("pause", () => {
-        if (video.ended) return;
-        if (video.matches("[data-play-after-reveal]") && video.dataset.revealReady !== "true") return;
-        video.play().catch(() => {});
+  const setFormFeedback = (form, message, state = "ok") => {
+    const feedback = form.querySelector("[data-form-feedback]");
+    if (!feedback) return;
+
+    feedback.textContent = message;
+    feedback.classList.toggle("ok", state === "ok");
+    feedback.classList.toggle("err", state === "err");
+  };
+
+  const sanitizeSingleLine = (value, maxLength) => String(value || "")
+    .replace(/[<>{}`]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+
+  const sanitizeMultiLine = (value, maxLength) => String(value || "")
+    .replace(/[<>{}`]/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxLength);
+
+  const sanitizePhone = (value) => String(value || "")
+    .replace(/[^+\d\s().-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 30);
+
+  const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,160}$/.test(value);
+  const apiUrl = (path) => `${API_BASE_URL}${path}`;
+  const normalizeEmail = (value) => sanitizeSingleLine(value, 160).toLowerCase();
+  const normalizePlan = (value) => {
+    const plan = sanitizeSingleLine(value, 40).toLowerCase();
+    return ALLOWED_PLAN_VALUES.has(plan) ? plan : DEFAULT_PLAN;
+  };
+  const isValidPassword = (value) => {
+    const password = String(value || "");
+    return (
+      password.length >= 8 &&
+      password.length <= 256 &&
+      /[a-z]/.test(password) &&
+      /[A-Z]/.test(password) &&
+      /\d/.test(password)
+    );
+  };
+
+  const getNamedField = (form, name) => form.querySelector(`[name="${name}"]`);
+
+  const validateTextField = ({ field, label, min = 0, max = 160, required = false, multiline = false }) => {
+    if (!field) return null;
+
+    const cleaned = multiline ? sanitizeMultiLine(field.value, max) : sanitizeSingleLine(field.value, max);
+    field.value = cleaned;
+    setFieldState(field);
+
+    if (required && !cleaned) return { field, message: `${label} es obligatorio.` };
+    if (cleaned && cleaned.length < min) return { field, message: `${label} debe tener al menos ${min} caracteres.` };
+    return null;
+  };
+
+  const validateEmailField = (field) => {
+    if (!field) return null;
+
+    const email = sanitizeSingleLine(field.value, 160).toLowerCase();
+    field.value = email;
+    setFieldState(field);
+
+    if (!email) return { field, message: "Email es obligatorio." };
+    if (!isValidEmail(email)) return { field, message: "Introduce un email válido." };
+    return null;
+  };
+
+  const validatePhoneField = (field) => {
+    if (!field) return null;
+
+    const phone = sanitizePhone(field.value);
+    field.value = phone;
+    setFieldState(field);
+
+    if (phone && !/^[+\d\s().-]{6,30}$/.test(phone)) {
+      return { field, message: "Introduce un teléfono válido." };
+    }
+
+    return null;
+  };
+
+  const validateRequiredPhoneField = (field) => {
+    if (!field) return null;
+
+    const phone = sanitizePhone(field.value);
+    field.value = phone;
+    setFieldState(field);
+
+    if (!phone) return { field, message: "Teléfono es obligatorio." };
+    if (!/^[+\d\s().-]{6,30}$/.test(phone)) return { field, message: "Introduce un teléfono válido." };
+    return null;
+  };
+
+  const validatePasswordField = (field) => {
+    if (!field) return null;
+
+    const password = String(field.value || "");
+    setFieldState(field);
+
+    if (!password) return { field, message: "Contraseña es obligatoria." };
+    if (!isValidPassword(password)) {
+      return {
+        field,
+        message: "La contraseña debe tener entre 8 y 256 caracteres e incluir mayúscula, minúscula y número.",
+      };
+    }
+    return null;
+  };
+
+  const applyFirstFormError = (form, error) => {
+    if (!error) return false;
+
+    setFieldState(error.field, error.message);
+    setFormFeedback(form, error.message, "err");
+    error.field.focus({ preventScroll: false });
+    error.field.reportValidity();
+    return true;
+  };
+
+  const validateContactForm = (form) => {
+    const phoneInput = form.querySelector("[data-phone-number]");
+    const phoneHidden = form.querySelector("[data-phone-full]");
+    const phonePrefix = form.querySelector("[data-phone-prefix-code]");
+
+    const error =
+      validateTextField({ field: getNamedField(form, "nombre"), label: "Nombre", min: 2, max: 80, required: true }) ||
+      validateEmailField(getNamedField(form, "email")) ||
+      validateTextField({ field: getNamedField(form, "empresa"), label: "Empresa", max: 120 }) ||
+      validatePhoneField(phoneInput) ||
+      validateTextField({ field: getNamedField(form, "mensaje"), label: "Mensaje", min: 10, max: 1000, required: true, multiline: true });
+
+    if (phoneHidden) {
+      const number = sanitizePhone(phoneInput ? phoneInput.value : "");
+      const prefix = sanitizePhone(phonePrefix ? phonePrefix.textContent : "");
+      phoneHidden.value = number ? `${prefix} ${number}`.trim() : "";
+    }
+
+    return !applyFirstFormError(form, error);
+  };
+
+  const initFrontendForms = () => {
+    frontendForms.forEach((form) => {
+      form.addEventListener("input", (event) => {
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+          setFieldState(event.target);
+          setFormFeedback(form, "", "ok");
+        }
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const valid = validateContactForm(form);
+        if (!valid) return;
+
+        form.reset();
+        setFormFeedback(form, "Consulta preparada para conexión futura. No se ha enviado ningún dato.", "ok");
       });
     });
   };
 
-  const prepareRevealPlaybackVideos = () => {
-    if (revealPlaybackVideos.length === 0) return;
-
-    revealPlaybackVideos.forEach((video) => {
-      video.dataset.revealReady = "false";
-      video.removeAttribute("autoplay");
-      video.pause();
+  const initFrontendPlaceholders = () => {
+    frontendPlaceholderLinks.forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        showFrontendToast(link.dataset.placeholderMessage || "Funcionalidad preparada para conexión futura.");
+      });
     });
   };
 
-  navItems.forEach((item) => {
-    item.addEventListener("mouseenter", () => {
-      if (topOnlyNavPill && !isAtTop) return;
-      setActiveNavPill(item);
+  const parseJsonResponse = async (response) => {
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
+  };
+
+  const responseErrorMessage = (data, fallback) => {
+    if (!data || typeof data !== "object") return fallback;
+    if (typeof data.error === "string") return sanitizeSingleLine(data.error, 240);
+    if (typeof data.detail === "string") return sanitizeSingleLine(data.detail, 240);
+
+    const firstValue = Object.values(data)[0];
+    if (Array.isArray(firstValue) && typeof firstValue[0] === "string") {
+      return sanitizeSingleLine(firstValue[0], 240);
+    }
+    if (typeof firstValue === "string") return sanitizeSingleLine(firstValue, 240);
+    return fallback;
+  };
+
+  const redirectToBackendTarget = (target) => {
+    try {
+      const url = new URL(String(target || "/"), API_BASE_URL);
+      if (url.origin === API_BASE_URL || url.origin === window.location.origin) {
+        window.location.assign(url.href);
+        return;
+      }
+    } catch {
+      // Fallback below.
+    }
+    window.location.assign(API_BASE_URL);
+  };
+
+  const setButtonLoading = (button, label, loadingText, defaultText, loading) => {
+    if (!button) return;
+
+    button.disabled = loading;
+    if (label) label.textContent = loading ? loadingText : defaultText;
+  };
+
+  const validateLoginForm = (form) => {
+    const emailField = form.querySelector("#login-email");
+    const passwordField = form.querySelector("#login-password");
+    const error = validateEmailField(emailField) || validatePasswordField(passwordField);
+    return !applyFirstFormError(form, error);
+  };
+
+  const validateBackendRegisterForm = (form) => {
+    const error =
+      validateTextField({ field: form.querySelector("#name"), label: "Nombre", min: 2, max: 80, required: true }) ||
+      validateRequiredPhoneField(form.querySelector("#phone")) ||
+      validateEmailField(form.querySelector("#email")) ||
+      validatePasswordField(form.querySelector("#password"));
+
+    return !applyFirstFormError(form, error);
+  };
+
+  const initLoginForm = () => {
+    if (!loginForm) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const banner = loginForm.ownerDocument.querySelector("#login-banner");
+    const submitButton = loginForm.querySelector("#btn-login-submit");
+    const submitLabel = loginForm.querySelector("#btn-login-label");
+
+    if (params.get("registro") === "ok" && banner) {
+      banner.textContent = "Cuenta creada correctamente. Ya puedes iniciar sesión.";
+      banner.classList.add("ok");
+    }
+
+    loginForm.addEventListener("input", (event) => {
+      if (event.target instanceof HTMLInputElement) {
+        setFieldState(event.target);
+        setFormFeedback(loginForm, "", "ok");
+      }
     });
-    item.addEventListener("focus", () => {
-      if (topOnlyNavPill && !isAtTop) return;
-      setActiveNavPill(item);
+
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!validateLoginForm(loginForm)) return;
+
+      const email = normalizeEmail(loginForm.querySelector("#login-email")?.value);
+      const password = String(loginForm.querySelector("#login-password")?.value || "");
+
+      setButtonLoading(submitButton, submitLabel, "Entrando...", "Entrar", true);
+      setFormFeedback(loginForm, "", "ok");
+
+      try {
+        const response = await fetch(apiUrl("/api/login/"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await parseJsonResponse(response);
+
+        if (!response.ok) {
+          setFormFeedback(loginForm, responseErrorMessage(data, "Credenciales incorrectas. Revisa tu email y contraseña."), "err");
+          return;
+        }
+
+        redirectToBackendTarget(data.redirect || "/");
+      } catch {
+        setFormFeedback(loginForm, "No se pudo conectar con el servidor. Inténtalo de nuevo en unos minutos.", "err");
+      } finally {
+        setButtonLoading(submitButton, submitLabel, "Entrando...", "Entrar", false);
+      }
     });
+  };
+
+  const initRegisterForm = () => {
+    if (!registerForm) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const selectedPlan = normalizePlan(params.get("plan"));
+    const storedDraft = sessionStorage.getItem(REGISTER_DRAFT_KEY);
+
+    if (storedDraft) {
+      try {
+        const draft = JSON.parse(storedDraft);
+        if (draft && typeof draft === "object") {
+          if (draft.nombre) registerForm.querySelector("#name").value = sanitizeSingleLine(draft.nombre, 80);
+          if (draft.telefono) registerForm.querySelector("#phone").value = sanitizePhone(draft.telefono);
+          if (draft.email) registerForm.querySelector("#email").value = normalizeEmail(draft.email);
+        }
+      } catch {
+        sessionStorage.removeItem(REGISTER_DRAFT_KEY);
+      }
+    }
+
+    registerForm.addEventListener("input", (event) => {
+      if (event.target instanceof HTMLInputElement) {
+        setFieldState(event.target);
+        setFormFeedback(registerForm, "", "ok");
+      }
+    });
+
+    registerForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!validateBackendRegisterForm(registerForm)) return;
+
+      const payload = {
+        nombre: sanitizeSingleLine(registerForm.querySelector("#name")?.value, 80),
+        telefono: sanitizePhone(registerForm.querySelector("#phone")?.value),
+        email: normalizeEmail(registerForm.querySelector("#email")?.value),
+        password: String(registerForm.querySelector("#password")?.value || ""),
+        plan: selectedPlan,
+      };
+
+      if (payload.plan === DEFAULT_PLAN) {
+        sessionStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify({
+          nombre: payload.nombre,
+          telefono: payload.telefono,
+          email: payload.email,
+        }));
+        window.location.assign("planes.html");
+        return;
+      }
+
+      const submitButton = registerForm.querySelector(".auth-form-submit");
+      const submitLabel = submitButton?.querySelector("span");
+      setButtonLoading(submitButton, submitLabel, "Creando cuenta...", "Crear cuenta", true);
+      setFormFeedback(registerForm, "", "ok");
+
+      try {
+        const response = await fetch(apiUrl("/api/register/"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await parseJsonResponse(response);
+
+        if (!response.ok) {
+          setFormFeedback(registerForm, responseErrorMessage(data, "No se pudo completar el registro. Revisa los datos e inténtalo de nuevo."), "err");
+          return;
+        }
+
+        sessionStorage.removeItem(REGISTER_DRAFT_KEY);
+        window.location.assign(`confirm.html?email=${encodeURIComponent(payload.email)}`);
+      } catch {
+        setFormFeedback(registerForm, "No se pudo conectar con el servidor. Inténtalo de nuevo en unos minutos.", "err");
+      } finally {
+        setButtonLoading(submitButton, submitLabel, "Creando cuenta...", "Crear cuenta", false);
+      }
+    });
+  };
+
+  const initAuthForms = () => {
+    initLoginForm();
+    initRegisterForm();
+  };
+
+  const initConfirmPage = () => {
+    const params = new URLSearchParams(window.location.search);
+    const email = normalizeEmail(params.get("email"));
+
+    if (confirmEmail) {
+      if (isValidEmail(email)) confirmEmail.textContent = email;
+    }
+
+    if (!resendButton || !resendFeedback) return;
+
+    const setResendFeedback = (message, state) => {
+      resendFeedback.textContent = message;
+      resendFeedback.classList.toggle("ok", state === "ok");
+      resendFeedback.classList.toggle("err", state === "err");
+    };
+
+    const updateCooldown = () => {
+      const unlockAt = Number(localStorage.getItem(RESEND_UNLOCK_KEY) || 0);
+      const remainingMs = unlockAt - Date.now();
+      if (remainingMs <= 0) {
+        resendButton.disabled = false;
+        if (resendButtonLabel) resendButtonLabel.textContent = "Reenviar correo";
+        return;
+      }
+
+      resendButton.disabled = true;
+      const remainingSeconds = Math.ceil(remainingMs / 1000);
+      if (resendButtonLabel) resendButtonLabel.textContent = `Reenviar en ${remainingSeconds}s`;
+      window.setTimeout(updateCooldown, 1000);
+    };
+
+    updateCooldown();
+
+    resendButton.addEventListener("click", async () => {
+      if (!isValidEmail(email)) {
+        setResendFeedback("No se ha podido identificar un email válido para reenviar la confirmación.", "err");
+        return;
+      }
+
+      resendButton.disabled = true;
+      if (resendButtonLabel) resendButtonLabel.textContent = "Enviando...";
+      setResendFeedback("", "ok");
+
+      try {
+        const response = await fetch(apiUrl("/api/resend-confirmation/"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await parseJsonResponse(response);
+
+        if (!response.ok && response.status !== 429) {
+          const fallback = response.status === 410
+            ? "El registro ha expirado. Puedes registrarte de nuevo para recibir otro enlace."
+            : "No se pudo reenviar el correo. Inténtalo de nuevo más tarde.";
+          setResendFeedback(responseErrorMessage(data, fallback), "err");
+          resendButton.disabled = false;
+          if (resendButtonLabel) resendButtonLabel.textContent = "Reenviar correo";
+          return;
+        }
+
+        localStorage.setItem(RESEND_UNLOCK_KEY, String(Date.now() + RESEND_COOLDOWN_MS));
+        setResendFeedback("Correo reenviado. Revisa tu bandeja de entrada y spam.", "ok");
+        updateCooldown();
+      } catch {
+        setResendFeedback("No se pudo conectar con el servidor. Inténtalo de nuevo en unos minutos.", "err");
+        resendButton.disabled = false;
+        if (resendButtonLabel) resendButtonLabel.textContent = "Reenviar correo";
+      }
+    });
+  };
+
+  const initConfirmErrorPage = () => {
+    const title = document.querySelector("#error-title");
+    const intro = document.querySelector("#error-intro");
+    const expired = document.querySelector("#reason-expired");
+    const used = document.querySelector("#reason-used");
+    if (!title || !intro) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const reason = sanitizeSingleLine(params.get("reason"), 20).toLowerCase();
+
+    if (reason === "expired") {
+      title.textContent = "El enlace ha caducado";
+      intro.textContent = "Por motivos de seguridad, los enlaces de confirmación son válidos durante un tiempo limitado. Este enlace ha superado ese límite.";
+      expired?.classList.add("is-current-reason");
+    } else if (reason === "used") {
+      title.textContent = "El enlace ya fue utilizado";
+      intro.textContent = "Por motivos de seguridad, cada enlace de confirmación solo puede usarse una vez. Este enlace ya fue empleado anteriormente.";
+      used?.classList.add("is-current-reason");
+    }
+  };
+
+  const decodePathPart = (value) => {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  };
+
+  const logoNameFromUrl = (url) => {
+    const fileName = decodePathPart(String(url).split("/").pop() || "");
+    return fileName
+      .replace(LOGO_FILE_PATTERN, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Logo";
+  };
+
+  const getLogoUrls = () => {
+    const datasetLogos = logoMarquee ? logoMarquee.dataset.logoList || "" : "";
+    const configuredLogos = datasetLogos
+      .split(",")
+      .map((url) => sanitizeSingleLine(url, 180))
+      .filter((url) => LOGO_FILE_PATTERN.test(url) && !/^https?:\/\//i.test(url));
+
+    return configuredLogos.length ? configuredLogos : DEFAULT_LOGO_URLS;
+  };
+
+  const shuffleItems = (items) => {
+    const shuffled = [...items];
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+    }
+    return shuffled;
+  };
+
+  const pickNextLogo = (logos, recentLogos) => {
+    const recentSet = new Set(recentLogos);
+    const candidates = logos.filter((logo) => !recentSet.has(logo));
+    const pool = candidates.length ? candidates : logos;
+    return pool[Math.floor(Math.random() * pool.length)];
+  };
+
+  const isLogoSequenceSpaced = (sequence, gap = LOGO_REPEAT_GAP) => {
+    if (sequence.length <= 1) return true;
+
+    return sequence.every((logo, index) => {
+      for (let offset = 1; offset <= Math.min(gap, sequence.length - 1); offset += 1) {
+        if (logo === sequence[(index + offset) % sequence.length]) return false;
+      }
+      return true;
+    });
+  };
+
+  const createLogoSequence = (logos, minItems = 24) => {
+    if (logos.length <= 1) return logos;
+
+    const targetLength = Math.max(minItems, logos.length);
+    const effectiveGap = Math.min(LOGO_REPEAT_GAP, logos.length - 1);
+
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      const sequence = [];
+
+      while (sequence.length < targetLength) {
+        sequence.push(pickNextLogo(logos, sequence.slice(-effectiveGap)));
+      }
+
+      if (isLogoSequenceSpaced(sequence, effectiveGap)) {
+        return sequence;
+      }
+    }
+
+    const stableOrder = shuffleItems(logos);
+    const fallback = [];
+    while (fallback.length < targetLength) {
+      fallback.push(...stableOrder);
+    }
+    return fallback.slice(0, targetLength);
+  };
+
+  const logoItem = (src) => {
+    const item = document.createElement("div");
+    item.className = "logo-marquee-item";
+
+    const image = document.createElement("img");
+    image.src = src;
+    image.alt = logoNameFromUrl(src);
+    image.loading = "lazy";
+    image.decoding = "async";
+
+    item.append(image);
+    return item;
+  };
+
+  const stopLogoMarquee = () => {
+    if (!logoMarqueeFrame) return;
+    cancelAnimationFrame(logoMarqueeFrame);
+    logoMarqueeFrame = null;
+  };
+
+  const tickLogoMarquee = (time) => {
+    if (!logoMarqueeTrack) return;
+
+    if (!logoMarqueeLastTime) logoMarqueeLastTime = time;
+    const elapsedSeconds = Math.min((time - logoMarqueeLastTime) / 1000, 0.05);
+    logoMarqueeLastTime = time;
+
+    logoMarqueeOffset += elapsedSeconds * 18;
+
+    let firstItem = logoMarqueeTrack.firstElementChild;
+    while (firstItem) {
+      const firstItemWidth = firstItem.getBoundingClientRect().width;
+      if (!firstItemWidth || logoMarqueeOffset < firstItemWidth) break;
+      logoMarqueeTrack.append(firstItem);
+      logoMarqueeOffset -= firstItemWidth;
+      firstItem = logoMarqueeTrack.firstElementChild;
+    }
+
+    logoMarqueeTrack.style.transform = `translate3d(${-logoMarqueeOffset}px, 0, 0)`;
+    logoMarqueeFrame = requestAnimationFrame(tickLogoMarquee);
+  };
+
+  const startLogoMarquee = () => {
+    stopLogoMarquee();
+    logoMarqueeOffset = 0;
+    logoMarqueeLastTime = 0;
+    if (logoMarqueeTrack) {
+      logoMarqueeTrack.style.transform = "translate3d(0, 0, 0)";
+    }
+    logoMarqueeFrame = requestAnimationFrame(tickLogoMarquee);
+  };
+
+  const renderLogoMarquee = (logos) => {
+    if (!logoMarquee || !logoMarqueeTrack || !logos.length) return;
+
+    const baseSequence = createLogoSequence(logos);
+    const fragment = document.createDocumentFragment();
+
+    baseSequence.forEach((logo) => {
+      fragment.append(logoItem(logo));
+    });
+
+    logoMarqueeTrack.replaceChildren(fragment);
+    logoMarquee.classList.add("is-ready");
+    startLogoMarquee();
+  };
+
+  const initLogoMarquee = () => {
+    if (!logoMarquee || !logoMarqueeTrack) return;
+
+    renderLogoMarquee(getLogoUrls());
+  };
+
+  const closeVideoModal = () => {
+    if (!videoModal) return;
+
+    videoModal.classList.remove("is-open");
+    videoModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("video-modal-open");
+
+    if (videoModalPlayer) {
+      videoModalPlayer.pause();
+      videoModalPlayer.currentTime = 0;
+    }
+
+    if (videoModalReturnFocus instanceof HTMLElement) {
+      videoModalReturnFocus.focus();
+    }
+    videoModalReturnFocus = null;
+  };
+
+  const openVideoModal = (trigger) => {
+    if (!videoModal) return;
+
+    videoModalReturnFocus = document.activeElement;
+    if (videoModalPlayer && trigger instanceof HTMLElement && trigger.dataset.videoModalSrc) {
+      videoModalPlayer.src = trigger.dataset.videoModalSrc;
+    }
+    videoModal.classList.add("is-open");
+    videoModal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("video-modal-open");
+
+    if (videoModalPlayer) {
+      videoModalPlayer.currentTime = 0;
+      videoModalPlayer.play().catch(() => {});
+    }
+
+    videoModalCloseButton?.focus();
+  };
+
+  const closeInvoiceInfoModal = () => {
+    if (!invoiceInfoModal) return;
+
+    invoiceInfoModal.classList.remove("is-open");
+    invoiceInfoModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("invoice-info-modal-open");
+
+    if (invoiceInfoReturnFocus instanceof HTMLElement) {
+      invoiceInfoReturnFocus.focus();
+    }
+    invoiceInfoReturnFocus = null;
+  };
+
+  const openInvoiceInfoModal = () => {
+    if (!invoiceInfoModal) return;
+
+    invoiceInfoReturnFocus = document.activeElement;
+    invoiceInfoModal.classList.add("is-open");
+    invoiceInfoModal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("invoice-info-modal-open");
+    invoiceInfoCloseButton?.focus();
+  };
+
+  const closeVerifactuInfoModal = () => {
+    if (!verifactuInfoModal) return;
+
+    verifactuInfoModal.classList.remove("is-open");
+    verifactuInfoModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("invoice-info-modal-open");
+
+    if (verifactuInfoReturnFocus instanceof HTMLElement) {
+      verifactuInfoReturnFocus.focus();
+    }
+    verifactuInfoReturnFocus = null;
+  };
+
+  const openVerifactuInfoModal = () => {
+    if (!verifactuInfoModal) return;
+
+    verifactuInfoReturnFocus = document.activeElement;
+    verifactuInfoModal.classList.add("is-open");
+    verifactuInfoModal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("invoice-info-modal-open");
+    verifactuInfoCloseButton?.focus();
+  };
+
+  const closeSuccessStoryModal = () => {
+    if (!successStoryModal) return;
+
+    successStoryModal.classList.remove("is-open");
+    successStoryModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("invoice-info-modal-open");
+
+    if (successStoryReturnFocus instanceof HTMLElement) {
+      successStoryReturnFocus.focus();
+    }
+    successStoryReturnFocus = null;
+  };
+
+  const openSuccessStoryModal = () => {
+    if (!successStoryModal) return;
+
+    successStoryReturnFocus = document.activeElement;
+    successStoryModal.classList.add("is-open");
+    successStoryModal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("invoice-info-modal-open");
+    successStoryCloseButton?.focus();
+  };
+
+  const flagToRegionCode = (flag) => {
+    const letters = [...String(flag || "")]
+      .map((character) => character.codePointAt(0) - 0x1F1E6 + 65)
+      .filter((codePoint) => codePoint >= 65 && codePoint <= 90)
+      .map((codePoint) => String.fromCodePoint(codePoint));
+    return letters.length === 2 ? letters.join("") : "";
+  };
+
+  const countryNameFromFlag = (flag) => {
+    const regionCode = flagToRegionCode(flag);
+    if (!regionCode || typeof Intl.DisplayNames !== "function") return regionCode || "Pais";
+
+    try {
+      return new Intl.DisplayNames(["es"], { type: "region" }).of(regionCode) || regionCode;
+    } catch {
+      return regionCode;
+    }
+  };
+
+  const initPhonePrefixCombobox = () => {
+    const control = document.querySelector("[data-phone-prefix-combobox]");
+    if (!control) return;
+
+    const source = control.querySelector("[data-phone-prefix-source]");
+    const button = control.querySelector("[data-phone-prefix-button]");
+    const flagLabel = control.querySelector("[data-phone-prefix-flag]");
+    const codeLabel = control.querySelector("[data-phone-prefix-code]");
+    const menu = control.querySelector("[data-phone-prefix-menu]");
+    const phoneInput = control.querySelector("[data-phone-number]");
+    const phoneHidden = control.querySelector("[data-phone-full]");
+    const form = control.closest("form");
+
+    if (!source || !button || !flagLabel || !codeLabel || !menu || !phoneInput || !phoneHidden) return;
+
+    const optionData = [...source.options].map((option, index) => {
+      const flag = (option.textContent || "").trim().split(/\s+/)[0] || "";
+      return {
+        flag,
+        country: countryNameFromFlag(flag),
+        prefix: option.value,
+        selected: option.selected,
+        id: `phone-prefix-option-${index}`,
+      };
+    });
+
+    if (!optionData.length) return;
+
+    const updateHiddenPhone = () => {
+      const number = phoneInput.value.trim();
+      phoneHidden.value = number ? `${source.value} ${number}` : source.value;
+    };
+
+    const setSelectedPrefix = (item) => {
+      source.value = item.prefix;
+      flagLabel.textContent = item.flag;
+      codeLabel.textContent = item.prefix;
+      menu.querySelectorAll("[role='option']").forEach((option) => {
+        option.setAttribute("aria-selected", String(option.dataset.prefix === item.prefix && option.dataset.flag === item.flag));
+      });
+      updateHiddenPhone();
+    };
+
+    const closeMenu = () => {
+      control.classList.remove("is-open");
+      menu.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+    };
+
+    const openMenu = () => {
+      control.classList.add("is-open");
+      menu.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+    };
+
+    const menuFragment = document.createDocumentFragment();
+    optionData.forEach((item) => {
+      const optionButton = document.createElement("button");
+      optionButton.type = "button";
+      optionButton.id = item.id;
+      optionButton.className = "contact-page-phone-option";
+      optionButton.dataset.prefix = item.prefix;
+      optionButton.dataset.flag = item.flag;
+      optionButton.setAttribute("role", "option");
+      optionButton.setAttribute("aria-selected", "false");
+
+      const flagSpan = document.createElement("span");
+      flagSpan.className = "contact-page-phone-option-flag";
+      flagSpan.textContent = item.flag;
+
+      const countrySpan = document.createElement("span");
+      countrySpan.className = "contact-page-phone-option-country";
+      countrySpan.textContent = item.country;
+
+      const prefixSpan = document.createElement("span");
+      prefixSpan.className = "contact-page-phone-option-code";
+      prefixSpan.textContent = item.prefix;
+
+      optionButton.append(flagSpan, countrySpan, prefixSpan);
+      optionButton.addEventListener("click", () => {
+        setSelectedPrefix(item);
+        closeMenu();
+        phoneInput.focus();
+      });
+      menuFragment.append(optionButton);
+    });
+    menu.replaceChildren(menuFragment);
+
+    const initialItem = optionData.find((item) => item.selected) || optionData[0];
+    setSelectedPrefix(initialItem);
+
+    button.addEventListener("click", () => {
+      if (menu.hidden) {
+        openMenu();
+      } else {
+        closeMenu();
+      }
+    });
+
+    button.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowDown" && event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openMenu();
+      const selectedOption = menu.querySelector("[aria-selected='true']") || menu.querySelector("[role='option']");
+      selectedOption?.focus();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!control.contains(event.target)) closeMenu();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeMenu();
+    });
+
+    phoneInput.addEventListener("input", updateHiddenPhone);
+    form?.addEventListener("submit", updateHiddenPhone);
+  };
+
+  navItems.forEach((link) => {
+    link.addEventListener("mouseenter", () => setActiveNavPill(link));
+    link.addEventListener("focus", () => setActiveNavPill(link));
   });
 
-  if (navLinks) {
+  if (navPill && navLinks) {
     navLinks.addEventListener("mouseleave", clearNavPill);
     navLinks.addEventListener("focusout", (event) => {
       if (!navLinks.contains(event.relatedTarget)) clearNavPill();
     });
   }
 
-  prepareRevealPlaybackVideos();
-  initContactPhoneField();
-
-  if (revealElements.length > 0 && "IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const alreadyShown = entry.target.classList.contains("has-appeared");
-            if (scrollDirection === "down" && !alreadyShown) {
-              entry.target.classList.add("is-visible");
-              playRevealVideosAfterTransition(entry.target);
-            } else {
-              showWithoutFade(entry.target);
-              playRevealVideos(entry.target);
-            }
-            entry.target.classList.add("has-appeared");
-          } else if (!entry.target.classList.contains("has-appeared")) {
-            entry.target.classList.remove("is-visible");
-            entry.target.classList.remove("no-transition");
-          }
-        });
-      },
-      { threshold: 0.2, rootMargin: "0px 0px -8% 0px" }
-    );
-
-    revealElements.forEach((el, index) => {
-      el.style.setProperty("--reveal-delay", `${Math.min(index * 60, 300)}ms`);
-      observer.observe(el);
-    });
-  } else if (revealElements.length > 0) {
-    revealElements.forEach((el) => {
-      el.classList.add("is-visible");
-      playRevealVideos(el);
-    });
-  }
-
-  if (contactForm) {
-    contactForm.addEventListener("submit", (event) => {
-      if (contactForm.action.startsWith("https://formsubmit.co/")) return;
-
+  videoModalOpenItems.forEach((item) => {
+    item.addEventListener("click", (event) => {
       event.preventDefault();
-      const formData = new FormData(contactForm);
-      const name = sanitizeForMailto(formData.get("Nombre"), 120);
-      const email = sanitizeForMailto(formData.get("Email") || formData.get("email"), 160);
-      const company = sanitizeForMailto(formData.get("Empresa"), 120);
-      const message = sanitizeForMailto(formData.get("Mensaje"), 2000);
-      if (!name || !email || !message || !EMAIL_REGEX.test(email)) {
-        contactForm.reportValidity();
-        return;
-      }
-      const subject = encodeURIComponent(`Consulta web SmartBook AI - ${name || "Nuevo contacto"}`);
-      const body = encodeURIComponent(
-        `Nombre: ${name}\nEmail: ${email}\nEmpresa: ${company || "-"}\n\nMensaje:\n${message}`
-      );
-      window.location.href = `mailto:info@smartbook-ai.com?subject=${subject}&body=${body}`;
+      openVideoModal(item);
     });
-  }
+  });
+  videoModalCloseItems.forEach((item) => item.addEventListener("click", closeVideoModal));
+  invoiceInfoOpenItems.forEach((item) => {
+    item.addEventListener("click", openInvoiceInfoModal);
+  });
+  invoiceInfoCloseItems.forEach((item) => item.addEventListener("click", closeInvoiceInfoModal));
+  verifactuInfoOpenItems.forEach((item) => {
+    item.addEventListener("click", openVerifactuInfoModal);
+  });
+  verifactuInfoCloseItems.forEach((item) => item.addEventListener("click", closeVerifactuInfoModal));
+  successStoryOpenItems.forEach((item) => {
+    item.addEventListener("click", openSuccessStoryModal);
+  });
+  successStoryCloseItems.forEach((item) => item.addEventListener("click", closeSuccessStoryModal));
 
-  window.addEventListener(
-    "scroll",
-    () => {
-      const currentY = window.scrollY;
-      if (currentY > lastScrollY) scrollDirection = "down";
-      if (currentY < lastScrollY) scrollDirection = "up";
-      lastScrollY = currentY;
-      queueLayoutUpdate();
-    },
-    { passive: true }
-  );
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && videoModal?.classList.contains("is-open")) {
+      closeVideoModal();
+    }
 
-  window.addEventListener(
-    "resize",
-    () => {
-      if (isResizeFrameQueued) return;
-      isResizeFrameQueued = true;
-      window.requestAnimationFrame(() => {
-        isResizeFrameQueued = false;
-        const active = navLinks?.querySelector("a.is-pill-active");
-        if (active) {
-          setActiveNavPill(active, true);
-        } else if (topOnlyNavPill) {
-          clearNavPill();
-        }
-        queueLayoutUpdate();
-      });
-    },
-    { passive: true }
-  );
+    if (event.key === "Escape" && invoiceInfoModal?.classList.contains("is-open")) {
+      closeInvoiceInfoModal();
+    }
 
-  setNavbarState();
+    if (event.key === "Escape" && verifactuInfoModal?.classList.contains("is-open")) {
+      closeVerifactuInfoModal();
+    }
+
+    if (event.key === "Escape" && successStoryModal?.classList.contains("is-open")) {
+      closeSuccessStoryModal();
+    }
+  });
+
+  window.addEventListener("scroll", queueLayoutUpdate, { passive: true });
+  window.addEventListener("resize", queueLayoutUpdate);
+
   paintHeadmarkPurple();
-  updateHeroScrollState();
-  hydrateShareLinks();
-  lockVideos();
+  setNavbarState();
+  initRevealAnimations();
+  initLogoMarquee();
+  initPhonePrefixCombobox();
+  initFrontendForms();
+  initAuthForms();
+  initFrontendPlaceholders();
+  initConfirmPage();
+  initConfirmErrorPage();
   hardenBlankTargetLinks();
-
-  const GOOGLE_CLIENT_ID = "777000793019-pi4b3ijo5jcn2l79brbv9d0f3a4lg59s.apps.googleusercontent.com";
-
-  const GOOGLE_SESSION_KEY = "sba_google_auth";
-
-  const handleGoogleToken = async (tokenResponse) => {
-    const btnGoogle  = document.getElementById("btn-google");
-    const loginError = document.getElementById("login-error");
-
-    if (tokenResponse.error) {
-      if (loginError) { loginError.textContent = "Autenticación con Google cancelada."; loginError.style.display = "block"; }
-      return;
-    }
-
-    if (btnGoogle) btnGoogle.disabled = true;
-    if (loginError) loginError.style.display = "none";
-
-    let email = "", name = "";
-    try {
-      const uiRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-      });
-      const ui = await uiRes.json();
-      email = ui.email || "";
-      name  = ui.name  || "";
-    } catch { /* continúa sin datos */ }
-
-    try {
-      const res  = await fetch("http://127.0.0.1:8080/api/auth/google/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ access_token: tokenResponse.access_token }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        if (loginError) { loginError.textContent = data.error || "Error al iniciar sesión con Google."; loginError.style.display = "block"; }
-        if (btnGoogle) btnGoogle.disabled = false;
-        return;
-      }
-
-      if (data.action === "register") {
-        sessionStorage.setItem(GOOGLE_SESSION_KEY, JSON.stringify({ access_token: tokenResponse.access_token, email, name }));
-        window.location.href = "pricing.html";
-        return;
-      }
-
-      window.location.href = data.redirect || "http://127.0.0.1:8080/";
-    } catch {
-      if (loginError) { loginError.textContent = "No se pudo conectar con el servidor."; loginError.style.display = "block"; }
-      if (btnGoogle) btnGoogle.disabled = false;
-    }
-  };
-
-  const initGoogleAuth = () => {
-    if (!window.google?.accounts?.oauth2) return;
-
-    const btnGoogle = document.getElementById("btn-google");
-    if (!btnGoogle) return;
-
-    const tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: "openid email profile",
-      callback: handleGoogleToken,
-    });
-
-    btnGoogle.addEventListener("click", () => tokenClient.requestAccessToken());
-  };
-
-  window.addEventListener("load", initGoogleAuth);
-
-  const loginForm = document.getElementById("form-login");
-  if (loginForm) {
-    const loginErrorEl  = document.getElementById("login-error");
-    const loginBanner   = document.getElementById("login-banner");
-    const btnSubmit     = document.getElementById("btn-login-submit");
-    const btnLabel      = document.getElementById("btn-login-label");
-    const btnEye        = document.getElementById("btn-eye");
-    const pwInput       = document.getElementById("login-password");
-
-    if (loginBanner && new URLSearchParams(window.location.search).get("registro") === "ok") {
-      loginBanner.style.display = "block";
-    }
-
-    if (btnEye && pwInput) {
-      btnEye.addEventListener("click", () => {
-        const showing = pwInput.type === "text";
-        pwInput.type = showing ? "password" : "text";
-        btnEye.setAttribute("aria-label", showing ? "Mostrar contraseña" : "Ocultar contraseña");
-        const iconEl = document.getElementById("icon-eye");
-        if (iconEl) {
-          setSvgIcon(iconEl, showing
-            ? [
-                { tag: "path", attrs: { d: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" } },
-                { tag: "circle", attrs: { cx: "12", cy: "12", r: "3" } },
-              ]
-            : [
-                { tag: "path", attrs: { d: "M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" } },
-                { tag: "line", attrs: { x1: "1", y1: "1", x2: "23", y2: "23" } },
-              ]);
-        }
-      });
-    }
-
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (loginErrorEl) { loginErrorEl.style.display = "none"; loginErrorEl.textContent = ""; }
-      if (btnSubmit) { btnSubmit.disabled = true; }
-      if (btnLabel)  { btnLabel.textContent = "Accediendo…"; }
-
-      const email    = normalizeEmail(document.getElementById("login-email")?.value);
-      const password = pwInput?.value || "";
-
-      if (!isValidEmail(email) || !isValidPassword(password)) {
-        if (loginErrorEl) {
-          loginErrorEl.textContent = "Credenciales incorrectas. Inténtalo de nuevo.";
-          loginErrorEl.style.display = "block";
-        }
-        if (btnSubmit) btnSubmit.disabled = false;
-        if (btnLabel)  btnLabel.textContent = "Iniciar sesión";
-        return;
-      }
-
-      try {
-        const res = await fetch(apiUrl("/api/login/"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ email, password }),
-        });
-
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          const msg = data.error || data.detail || "Credenciales incorrectas. Inténtalo de nuevo.";
-          if (loginErrorEl) { loginErrorEl.textContent = msg; loginErrorEl.style.display = "block"; }
-          if (btnSubmit) btnSubmit.disabled = false;
-          if (btnLabel)  btnLabel.textContent = "Iniciar sesión";
-          return;
-        }
-
-        window.location.href = data.redirect || "http://127.0.0.1:8080/";
-      } catch {
-        if (loginErrorEl) {
-          loginErrorEl.textContent = "No se pudo conectar con el servidor. Comprueba tu conexión.";
-          loginErrorEl.style.display = "block";
-        }
-        if (btnSubmit) btnSubmit.disabled = false;
-        if (btnLabel)  btnLabel.textContent = "Iniciar sesión";
-      }
-    });
-  }
-
-  const registroForm = document.getElementById("form-registro");
-  if (registroForm) {
-    const errorEl = document.getElementById("registro-error");
-
-    const mostrarError = (msg) => {
-      if (!errorEl) return;
-      errorEl.textContent = msg;
-      errorEl.style.display = "block";
-    };
-
-    const ocultarError = () => {
-      if (!errorEl) return;
-      errorEl.style.display = "none";
-      errorEl.textContent = "";
-    };
-
-    // Detectar si viene de Google
-    const googleRaw = sessionStorage.getItem(GOOGLE_SESSION_KEY);
-    const googleData = googleRaw ? JSON.parse(googleRaw) : null;
-
-    if (googleData) {
-      const nameInput     = document.getElementById("name");
-      const emailInput    = document.getElementById("email");
-      const passwordField = document.getElementById("field-password");
-      const passwordInput = document.getElementById("password");
-      const banner        = document.getElementById("google-banner");
-      const emailLabel    = document.getElementById("google-email-label");
-
-      if (nameInput && googleData.name)   { nameInput.value = googleData.name; }
-      if (emailInput && googleData.email) { emailInput.value = googleData.email; emailInput.readOnly = true; }
-      if (passwordField) { passwordField.style.display = "none"; }
-      if (passwordInput) { passwordInput.required = false; passwordInput.removeAttribute("minlength"); }
-      if (banner)        { banner.style.display = "flex"; }
-      if (emailLabel)    { emailLabel.textContent = googleData.email; }
-    }
-
-    registroForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      ocultarError();
-
-      const btn = registroForm.querySelector(".auth-submit");
-      btn.textContent = "Procesando…";
-      btn.disabled = true;
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const emailValue = document.getElementById("email").value;
-
-      const payload = {
-        nombre:   normalizeText(document.getElementById("name").value),
-        telefono: normalizeText(document.getElementById("phone").value),
-        email:    normalizeEmail(document.getElementById("email").value),
-        plan:     normalizePlan(urlParams.get("plan")),
-      };
-
-      if (googleData) {
-        payload.google_access_token = googleData.access_token;
-      } else {
-        payload.password = document.getElementById("password").value;
-      }
-
-      if (!payload.nombre || !isValidPhone(payload.telefono) || !isValidEmail(payload.email)) {
-        mostrarError("Revisa los campos del formulario e inténtalo de nuevo.");
-        btn.textContent = "Registrarme gratis";
-        btn.disabled = false;
-        return;
-      }
-      if (!googleData && !isValidPassword(payload.password)) {
-        mostrarError("La contraseña debe tener al menos 8 caracteres.");
-        btn.textContent = "Registrarme gratis";
-        btn.disabled = false;
-        return;
-      }
-
-      try {
-        const res = await fetch(apiUrl("/api/register/"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          const msg =
-            data.email?.[0] ||
-            data.detail ||
-            data.error ||
-            Object.values(data)[0]?.[0] ||
-            "Ha ocurrido un error. Por favor, inténtalo de nuevo.";
-          mostrarError(msg);
-          btn.textContent = "Registrarme gratis";
-          btn.disabled = false;
-          return;
-        }
-
-        sessionStorage.removeItem(GOOGLE_SESSION_KEY);
-        window.location.href = `confirm.html?email=${encodeURIComponent(emailValue)}`;
-      } catch (err) {
-        console.error("[registro]", err);
-        mostrarError("No hemos podido conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.");
-        btn.textContent = "Registrarme gratis";
-        btn.disabled = false;
-      }
-    });
-  }
-
-  const confirmEmailEl = document.getElementById("confirm-email");
-  if (confirmEmailEl) {
-    const email = new URLSearchParams(window.location.search).get("email");
-    if (email) confirmEmailEl.textContent = email;
-  }
-
-  const btnResend = document.getElementById("btn-resend");
-  if (btnResend) {
-    const COOLDOWN_MS = 3 * 60 * 1000;
-    const STORAGE_KEY = "resend_unlock_at";
-    const labelEl = document.getElementById("btn-resend-label");
-    const feedbackEl = document.getElementById("resend-feedback");
-    const email = normalizeEmail(new URLSearchParams(window.location.search).get("email"));
-
-    let countdownInterval = null;
-
-    const setFeedback = (msg, type) => {
-      if (!feedbackEl) return;
-      feedbackEl.textContent = msg;
-      feedbackEl.className = `resend-feedback${type ? ` ${type}` : ""}`;
-    };
-
-    const startCountdown = (unlockAt) => {
-      if (countdownInterval) clearInterval(countdownInterval);
-      btnResend.disabled = true;
-
-      const tick = () => {
-        const remaining = Math.max(0, unlockAt - Date.now());
-        if (remaining === 0) {
-          clearInterval(countdownInterval);
-          countdownInterval = null;
-          btnResend.disabled = false;
-          if (labelEl) labelEl.textContent = "Reenviar correo";
-          return;
-        }
-        const mins = Math.floor(remaining / 60000);
-        const secs = Math.floor((remaining % 60000) / 1000);
-        if (labelEl) labelEl.textContent = `Reenviar en ${mins}:${String(secs).padStart(2, "0")}`;
-      };
-
-      tick();
-      countdownInterval = setInterval(tick, 1000);
-    };
-
-    const savedUnlockAt = Number(localStorage.getItem(STORAGE_KEY) || 0);
-    if (savedUnlockAt > Date.now()) {
-      startCountdown(savedUnlockAt);
-    }
-
-    btnResend.addEventListener("click", async () => {
-      if (btnResend.disabled) return;
-      if (!isValidEmail(email)) {
-        setFeedback("No se pudo identificar tu correo. Vuelve a la página de registro.", "err");
-        return;
-      }
-
-      btnResend.disabled = true;
-      if (labelEl) labelEl.textContent = "Enviando…";
-      setFeedback("", "");
-
-      try {
-        const res = await fetch(apiUrl("/api/resend-confirmation/"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-
-        if (res.status === 410) {
-          setFeedback("El registro ha expirado. Por favor, regístrate de nuevo.", "err");
-          btnResend.disabled = false;
-          if (labelEl) labelEl.textContent = "Reenviar correo";
-          return;
-        }
-
-        if (!res.ok && res.status !== 429) {
-          const data = await res.json().catch(() => ({}));
-          setFeedback(data.error || "No se pudo reenviar el correo. Inténtalo más tarde.", "err");
-          btnResend.disabled = false;
-          if (labelEl) labelEl.textContent = "Reenviar correo";
-          return;
-        }
-
-        const unlockAt = Date.now() + COOLDOWN_MS;
-        localStorage.setItem(STORAGE_KEY, String(unlockAt));
-        setFeedback("Correo reenviado. Revisa tu bandeja de entrada.", "ok");
-        startCountdown(unlockAt);
-      } catch {
-        setFeedback("No se pudo conectar con el servidor. Comprueba tu conexión.", "err");
-        btnResend.disabled = false;
-        if (labelEl) labelEl.textContent = "Reenviar correo";
-      }
-    });
-  }
 })();
