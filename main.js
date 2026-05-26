@@ -22,6 +22,7 @@
     "assets/logos/bhd.jpeg",
     "assets/logos/digitallaw.png",
     "assets/logos/lavadora.png",
+    "assets/logos/logolab.png",
     "assets/logos/pescado.png",
     "assets/logos/reshop.jpeg",
     "assets/logos/rydalca.jpeg",
