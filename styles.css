@@ -3471,6 +3471,32 @@ a {
     background: #140820;
   }
 
+  .video-modal {
+    align-items: center;
+    justify-items: center;
+    padding: 1rem;
+  }
+
+  .video-modal-dialog {
+    width: min(92vw, calc((100svh - 5rem) * 16 / 9));
+    max-height: calc(100svh - 2rem);
+    border-radius: 0.8rem;
+  }
+
+  .video-modal-player {
+    width: 100%;
+    max-height: calc(100svh - 2rem);
+    object-fit: contain;
+  }
+
+  .video-modal-close {
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1.5rem;
+  }
+
   .floating-whatsapp {
     width: 4rem;
     height: 4rem;
