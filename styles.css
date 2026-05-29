@@ -702,6 +702,13 @@ a {
   line-height: 1.78;
 }
 
+.invoice-demo-copy .price-highlight {
+  color: #141018;
+  font-size: clamp(1.0125rem, 1.7625vw, 1.5rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
 .invoice-demo-btn {
   position: relative;
   overflow: hidden;
@@ -808,6 +815,11 @@ a {
   filter: grayscale(0);
   opacity: 0.78;
   transition: filter 180ms ease, opacity 180ms ease;
+}
+
+.logo-marquee-item img[src$="logolab.png"] {
+  max-width: 82%;
+  max-height: 82%;
 }
 
 .logo-marquee-stage:hover .logo-marquee-item img,
@@ -1352,6 +1364,54 @@ a {
 .blog-community-whatsapp:hover,
 .blog-community-whatsapp:focus-visible {
   background: #1fbd5a;
+}
+
+.floating-whatsapp {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 1500;
+  display: grid;
+  place-items: center;
+  width: 4.75rem;
+  height: 4.75rem;
+  border-radius: 999px;
+  background: #25d366;
+  box-shadow: 0 1rem 2rem rgba(11, 64, 31, 0.28);
+  animation: whatsapp-pulse 1.8s ease-in-out infinite;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.floating-whatsapp:hover,
+.floating-whatsapp:focus-visible {
+  animation-play-state: paused;
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 1.25rem 2.4rem rgba(11, 64, 31, 0.34);
+}
+
+.floating-whatsapp:focus-visible {
+  outline: 3px solid rgba(37, 211, 102, 0.38);
+  outline-offset: 4px;
+}
+
+.floating-whatsapp img {
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  object-fit: contain;
+}
+
+@keyframes whatsapp-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 1rem 2rem rgba(11, 64, 31, 0.28), 0 0 0 0 rgba(37, 211, 102, 0.34);
+  }
+
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 1.25rem 2.4rem rgba(11, 64, 31, 0.34), 0 0 0 0.65rem rgba(37, 211, 102, 0);
+  }
 }
 
 .verifactu-block {
@@ -3258,25 +3318,32 @@ a {
 @media (max-width: 820px) {
   .nav-inner {
     flex-wrap: wrap;
+    align-items: center;
     gap: 12px;
   }
 
+  .nav-inner .logo {
+    order: 1;
+    margin-right: auto;
+  }
+
   .nav-links {
+    order: 3;
     width: 100%;
     justify-content: center;
-    order: 3;
     gap: 8px;
     padding-top: 2px;
     margin-right: 0;
   }
 
   .nav-actions {
+    order: 2;
     margin-left: auto;
   }
 
   .hero-new {
     min-height: auto;
-    padding: 9.75rem 0 3.75rem;
+    padding: 10.75rem 0 3.75rem;
   }
 
   .hero-new-inner {
@@ -3350,8 +3417,19 @@ a {
 }
 
 @media (max-width: 640px) {
+  .navbar .logo-img {
+    max-width: clamp(6.25rem, 31vw, 8.5rem);
+    max-height: 34px;
+  }
+
   .nav-actions {
-    gap: 8px;
+    gap: 6px;
+  }
+
+  .nav-actions .btn {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 0.78rem;
   }
 
   .btn {
@@ -3359,7 +3437,74 @@ a {
   }
 
   .hero-new {
-    padding: 11.5rem 0 3.5rem;
+    padding: 13.25rem 0 3.5rem;
+  }
+
+  .manual-process-section {
+    padding: 3rem 1rem;
+  }
+
+  .manual-process-inner {
+    width: min(100%, 34rem);
+    gap: 1rem;
+  }
+
+  .manual-process-eyebrow {
+    margin-bottom: -0.15rem;
+  }
+
+  .manual-process-inner h2 {
+    max-width: 20rem;
+    font-size: clamp(1.55rem, 7.2vw, 2.05rem);
+    line-height: 1.12;
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  .manual-process-video-wrap {
+    width: min(100%, 22rem);
+    border-radius: 0.85rem;
+  }
+
+  .manual-process-video {
+    object-fit: contain;
+    background: #140820;
+  }
+
+  .video-modal {
+    align-items: center;
+    justify-items: center;
+    padding: 1rem;
+  }
+
+  .video-modal-dialog {
+    width: min(92vw, calc((100svh - 5rem) * 16 / 9));
+    max-height: calc(100svh - 2rem);
+    border-radius: 0.8rem;
+  }
+
+  .video-modal-player {
+    width: 100%;
+    max-height: calc(100svh - 2rem);
+    object-fit: contain;
+  }
+
+  .video-modal-close {
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1.5rem;
+  }
+
+  .floating-whatsapp {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .floating-whatsapp img {
+    width: 2.55rem;
+    height: 2.55rem;
   }
 
   .hero-new-copy h1 {
