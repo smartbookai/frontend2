@@ -7,7 +7,7 @@
     <meta name="description" content="Automatización, inteligencia artificial, asistentes de voz, chatbots, desarrollo web y marketing digital para empresas con SmartBook AI." />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; upgrade-insecure-requests"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; media-src 'self'; connect-src 'self' https://cloud.flowiseai.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; frame-src 'self'; form-action 'self'; upgrade-insecure-requests"
     />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
@@ -178,6 +178,138 @@
           </div>
         </div>
       </section>
+
+      <section class="agency-section agency-tabs-section">
+        <div class="container agency-section-inner">
+          <div class="agency-section-heading reveal">
+            <p class="agency-kicker">Automatizaciones</p>
+            <h2>Automatizaciones que te hacen la vida más fácil</h2>
+          </div>
+          <div class="agency-tabs-layout">
+            <div class="agency-tabs-nav" role="tablist" aria-label="Tipos de automatización">
+              <button
+                class="agency-tab-btn is-active"
+                role="tab"
+                aria-selected="true"
+                aria-controls="agency-tab-panel-1"
+                id="agency-tab-1"
+                data-agency-tab="1"
+              >
+                <span class="agency-tab-label">Automatización de Respuestas y Soporte Post-Encuesta</span>
+                <span class="agency-tab-desc">Optimiza la experiencia del cliente al clasificar automáticamente sus opiniones para premiar la lealtad o gestionar reclamos de soporte de forma inmediata.</span>
+              </button>
+              <button
+                class="agency-tab-btn"
+                role="tab"
+                aria-selected="false"
+                aria-controls="agency-tab-panel-2"
+                id="agency-tab-2"
+                data-agency-tab="2"
+              >
+                <span class="agency-tab-label">Sistema Automatizado de Reserva y Agendamiento de Citas</span>
+                <span class="agency-tab-desc">Elimina las tareas manuales procesando formularios web al instante para asegurar reservas en Google Calendar o enviar alertas automáticas en caso de conflicto de horarios.</span>
+              </button>
+              <button
+                class="agency-tab-btn"
+                role="tab"
+                aria-selected="false"
+                aria-controls="agency-tab-panel-3"
+                id="agency-tab-3"
+                data-agency-tab="3"
+              >
+                <span class="agency-tab-label">Automatización de Seguimiento de Pedidos y Venta Cruzada (Cross-Selling)</span>
+                <span class="agency-tab-desc">Incrementa los ingresos recurrentes y fideliza al cliente notificando el estado de su envío por SMS e integrándolo a campañas de marketing con ofertas personalizadas a las 48 horas.</span>
+              </button>
+            </div>
+            <div class="agency-tabs-display">
+              <div class="agency-tab-panel is-active" id="agency-tab-panel-1" role="tabpanel" aria-labelledby="agency-tab-1">
+                <img src="assets/images/trab-flujos.jpg" alt="Flujos automáticos" class="agency-tab-image" />
+              </div>
+              <div class="agency-tab-panel" id="agency-tab-panel-2" role="tabpanel" aria-labelledby="agency-tab-2">
+                <img src="assets/images/tab-leads.jpg.jpg" alt="Captación de leads" class="agency-tab-image" />
+              </div>
+              <div class="agency-tab-panel" id="agency-tab-panel-3" role="tabpanel" aria-labelledby="agency-tab-3">
+                <img src="assets/images/tab-integracion.jpg.jpg" alt="Integración con herramientas" class="agency-tab-image" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="agency-section agency-results-section">
+        <div class="container agency-section-inner">
+          <div class="agency-section-heading reveal">
+            <p class="agency-kicker">Resultados</p>
+            <h2>Algunos de nuestros resultados</h2>
+          </div>
+          <div class="results-carousel">
+            <button class="results-nav-btn" id="results-prev" aria-label="Anterior">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="results-track-outer">
+              <div class="results-item" data-results-item="0">
+                <div class="results-card results-card-video">
+                  <div class="results-card-header">
+                    <span class="results-card-tag">Vídeo de demostración</span>
+                  </div>
+                  <video class="results-video" controls preload="metadata">
+                    <source src="assets/videos/resultado-demo.mp4" type="video/mp4" />
+                  </video>
+                </div>
+              </div>
+              <div class="results-item" data-results-item="1">
+                <div class="results-card results-card-web">
+                  <div class="results-card-header">
+                    <span class="results-card-dots"><span></span><span></span><span></span></span>
+                    <span class="results-card-tag">Rydalca — Sitio web</span>
+                  </div>
+                  <iframe src="rydalca/index.html" class="results-iframe" title="Rydalca - Sitio web" loading="lazy"></iframe>
+                </div>
+              </div>
+              <div class="results-item" data-results-item="2">
+                <div class="results-card results-card-chat">
+                  <div class="results-card-header">
+                    <span class="results-chat-status-dot"></span>
+                    <span class="results-card-tag">Chatbot IA</span>
+                    <span class="results-chat-online">En línea</span>
+                  </div>
+                  <div class="results-chat-messages" id="results-chat-messages">
+                    <div class="results-chat-msg results-chat-msg-bot">¡Hola! Soy un asistente de IA. ¿En qué puedo ayudarte hoy?</div>
+                  </div>
+                  <form class="results-chat-form" id="results-chat-form" autocomplete="off">
+                    <input type="text" class="results-chat-input" id="results-chat-input" placeholder="Escribe tu mensaje…" aria-label="Escribe un mensaje al chatbot" maxlength="500" />
+                    <button type="submit" class="results-chat-send" aria-label="Enviar mensaje">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            <button class="results-nav-btn" id="results-next" aria-label="Siguiente">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+          <div class="results-indicators" role="tablist" aria-label="Elementos del carrusel">
+            <button class="results-indicator is-active" data-results-go="0" role="tab" aria-selected="true" aria-label="Elemento 1"></button>
+            <button class="results-indicator" data-results-go="1" role="tab" aria-selected="false" aria-label="Elemento 2"></button>
+            <button class="results-indicator" data-results-go="2" role="tab" aria-selected="false" aria-label="Elemento 3"></button>
+          </div>
+        </div>
+      </section>
+
+      <div id="chat-limit-modal" class="chat-limit-overlay" hidden>
+        <div class="chat-limit-card">
+          <button class="chat-limit-close" id="chat-limit-close" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+          <div class="chat-limit-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </div>
+          <h3>¿Te interesa este producto?</h3>
+          <p>Ponte en contacto con nosotros y te enseñaremos una prueba gratuita personalizada para tu empresa.</p>
+          <a class="agency-cta agency-cta-primary" href="contacto.html" data-label="Contactar con nosotros"><span>Contactar con nosotros</span></a>
+        </div>
+      </div>
 
       <section class="agency-section agency-use-cases">
         <div class="container agency-section-inner">

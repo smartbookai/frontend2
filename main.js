@@ -439,6 +439,145 @@
     });
   };
 
+  const initResultsCarousel = () => {
+    const items = [...document.querySelectorAll("[data-results-item]")];
+    const indicators = [...document.querySelectorAll("[data-results-go]")];
+    if (!items.length) return;
+
+    const total = items.length;
+    let current = 0;
+    let busy = false;
+
+    const update = () => {
+      items.forEach((item, i) => {
+        item.classList.toggle("is-active", i === current);
+      });
+      indicators.forEach((ind, i) => {
+        ind.classList.toggle("is-active", i === current);
+        ind.setAttribute("aria-selected", String(i === current));
+      });
+    };
+
+    const navigate = (dir) => {
+      if (busy) return;
+      busy = true;
+      current = (current + dir + total) % total;
+      update();
+      setTimeout(() => (busy = false), 480);
+    };
+
+    document.getElementById("results-prev")?.addEventListener("click", () => navigate(-1));
+    document.getElementById("results-next")?.addEventListener("click", () => navigate(1));
+
+    indicators.forEach((ind) => {
+      ind.addEventListener("click", () => {
+        const target = Number(ind.dataset.resultsGo);
+        if (target !== current) navigate(target - current);
+      });
+    });
+
+    update();
+  };
+
+  const initResultsChat = () => {
+    const form = document.getElementById("results-chat-form");
+    if (!form) return;
+
+    const msgs = document.getElementById("results-chat-messages");
+    const input = document.getElementById("results-chat-input");
+    const sendBtn = form.querySelector(".results-chat-send");
+    const modal = document.getElementById("chat-limit-modal");
+    const modalClose = document.getElementById("chat-limit-close");
+    const FLOWISE_URL =
+      "https://cloud.flowiseai.com/api/v1/prediction/26728be9-ac01-435c-a80b-69df66bc87c3";
+    const MAX_USER_MSGS = 5;
+    let sending = false;
+    let userMsgCount = 0;
+
+    const openLimitModal = () => {
+      if (modal) { modal.hidden = false; document.body.style.overflow = "hidden"; }
+    };
+    const closeLimitModal = () => {
+      if (modal) { modal.hidden = true; document.body.style.overflow = ""; }
+    };
+
+    modalClose?.addEventListener("click", closeLimitModal);
+    modal?.addEventListener("click", (e) => { if (e.target === modal) closeLimitModal(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modal && !modal.hidden) closeLimitModal(); });
+
+    const addMsg = (text, isUser) => {
+      const d = document.createElement("div");
+      d.className = "results-chat-msg " + (isUser ? "results-chat-msg-user" : "results-chat-msg-bot");
+      d.textContent = text;
+      msgs.appendChild(d);
+      msgs.scrollTop = msgs.scrollHeight;
+      return d;
+    };
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const question = input.value.trim();
+      if (!question || sending) return;
+
+      if (userMsgCount >= MAX_USER_MSGS) {
+        openLimitModal();
+        return;
+      }
+
+      sending = true;
+      userMsgCount++;
+      input.value = "";
+      sendBtn.disabled = true;
+      addMsg(question, true);
+
+      const loader = addMsg("···", false);
+      loader.classList.add("results-chat-msg-loading");
+
+      try {
+        const res = await fetch(FLOWISE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+        const data = await res.json();
+        loader.textContent = data.text || data.answer || "Sin respuesta.";
+      } catch {
+        loader.textContent = "Error al conectar con el asistente. Inténtalo de nuevo.";
+      } finally {
+        loader.classList.remove("results-chat-msg-loading");
+        msgs.scrollTop = msgs.scrollHeight;
+        sending = false;
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    });
+  };
+
+  const initAgencyTabs = () => {
+    const buttons = [...document.querySelectorAll("[data-agency-tab]")];
+    if (!buttons.length) return;
+
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = "agency-tab-panel-" + btn.dataset.agencyTab;
+        const targetPanel = document.getElementById(targetId);
+        if (!targetPanel || btn.getAttribute("aria-selected") === "true") return;
+
+        buttons.forEach((b) => {
+          b.classList.remove("is-active");
+          b.setAttribute("aria-selected", "false");
+        });
+        document.querySelectorAll(".agency-tab-panel").forEach((p) => {
+          p.classList.remove("is-active");
+        });
+
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-selected", "true");
+        targetPanel.classList.add("is-active");
+      });
+    });
+  };
+
   const parseJsonResponse = async (response) => {
     try {
       return await response.json();
@@ -1187,4 +1326,7 @@
   initConfirmPage();
   initConfirmErrorPage();
   hardenBlankTargetLinks();
+  initResultsCarousel();
+  initResultsChat();
+  initAgencyTabs();
 })();
