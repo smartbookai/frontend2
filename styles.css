@@ -467,6 +467,13 @@ a {
   box-shadow: 0 10px 24px rgba(98, 50, 138, 0.32);
 }
 
+.agency-page .navbar.agency-scrolled {
+  background: rgba(7, 9, 21, 0.28);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
 .blank-page .navbar {
   background: rgba(255, 255, 255, 0.68);
   border-bottom-color: rgba(255, 255, 255, 0.84);
@@ -2866,16 +2873,16 @@ a {
 
 .agency-services-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(1.15rem, 2vw, 1.7rem);
+  grid-template-columns: 1fr;
+  gap: clamp(1.6rem, 2.8vw, 2.5rem);
 }
 
 .agency-service-card {
   display: grid;
-  grid-template-columns: minmax(11rem, 0.78fr) minmax(0, 1fr);
-  gap: clamp(1.2rem, 2vw, 1.7rem);
+  grid-template-columns: minmax(18rem, 0.6fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 3vw, 2.8rem);
   align-items: stretch;
-  padding: clamp(1rem, 1.6vw, 1.35rem);
+  padding: clamp(1.45rem, 2.8vw, 2.5rem);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 1rem;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.035));
@@ -2884,7 +2891,7 @@ a {
 
 .agency-service-card-wide {
   grid-column: 1 / -1;
-  grid-template-columns: minmax(15rem, 0.55fr) minmax(0, 1fr);
+  grid-template-columns: minmax(18rem, 0.6fr) minmax(0, 1fr);
 }
 
 .agency-demo-placeholder {
@@ -2894,8 +2901,8 @@ a {
   align-content: center;
   justify-items: center;
   gap: 0.8rem;
-  min-height: 14rem;
-  padding: 1rem;
+  min-height: clamp(18rem, 25vw, 23rem);
+  padding: clamp(1.15rem, 2vw, 1.8rem);
   border: 1px solid rgba(63, 248, 255, 0.18);
   border-radius: 0.85rem;
   background:
@@ -3047,13 +3054,13 @@ a {
 .agency-service-copy {
   display: grid;
   align-content: start;
-  gap: 0.85rem;
+  gap: clamp(0.9rem, 1.6vw, 1.25rem);
 }
 
 .agency-service-tag {
   margin: 0;
   color: #3ff8ff;
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -3069,6 +3076,10 @@ a {
   font-weight: 900;
 }
 
+.agency-service-copy h3 {
+  font-size: clamp(1.55rem, 2.4vw, 2.35rem);
+}
+
 .agency-service-copy p:not(.agency-service-tag),
 .agency-use-case-card p,
 .agency-process-card p,
@@ -3076,6 +3087,10 @@ a {
   margin: 0;
   color: rgba(255, 255, 255, 0.72);
   line-height: 1.62;
+}
+
+.agency-service-copy p:not(.agency-service-tag) {
+  font-size: clamp(1rem, 1.2vw, 1.12rem);
 }
 
 .agency-service-copy ul {
@@ -3090,7 +3105,7 @@ a {
   position: relative;
   padding-left: 1.25rem;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 0.94rem;
+  font-size: 1rem;
   line-height: 1.42;
   font-weight: 700;
 }
@@ -4480,11 +4495,11 @@ a {
 
   .agency-service-card,
   .agency-service-card-wide {
-    padding: 1rem;
+    padding: 1.25rem;
   }
 
   .agency-demo-placeholder {
-    min-height: 12rem;
+    min-height: 15rem;
   }
 
   .agency-benefits-grid {
