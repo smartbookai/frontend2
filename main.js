@@ -31,6 +31,7 @@
   const root = document.documentElement;
   const userAgent = navigator.userAgent;
   const isChromium = /(?:Chrome|Chromium|Edg)\//.test(userAgent) && !/Firefox\//.test(userAgent);
+  const keepNavbarAtTop = document.body.classList.contains("agency-page");
   const navbar = document.querySelector(".navbar");
   const headmarkCanvas = document.querySelector(".nav-headmark-canvas");
   const headmarkContext = headmarkCanvas ? headmarkCanvas.getContext("2d", { willReadFrequently: true }) : null;
@@ -184,8 +185,10 @@
   const setNavbarState = () => {
     if (!navbar) return;
 
-    const isAtTop = window.scrollY <= TOP_THRESHOLD;
+    const isScrolled = window.scrollY > TOP_THRESHOLD;
+    const isAtTop = keepNavbarAtTop || window.scrollY <= TOP_THRESHOLD;
     navbar.classList.toggle("scrolled", !isAtTop);
+    navbar.classList.toggle("agency-scrolled", keepNavbarAtTop && isScrolled);
 
     if (navbarLogo) {
       const targetLogo = isAtTop ? LOGO_URL : LOGO_MASK_URL;
