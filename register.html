@@ -1,17 +1,232 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>Redirigiendo… | SmartBook AI</title>
-  <meta name="robots" content="noindex" />
-  <script>
-    var plan = new URLSearchParams(window.location.search).get("plan");
-    var url = "https://app.smartbookai.es/register/";
-    if (plan) url += "?plan=" + encodeURIComponent(plan);
-    window.location.replace(url);
-  </script>
-</head>
-<body>
-  <p>Redirigiendo… <a href="https://app.smartbookai.es/register/">Haz clic aquí si no te redirige</a></p>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crear cuenta | SmartBook AI</title>
+    <meta name="description" content="Crea tu cuenta en SmartBook AI y empieza tu prueba gratuita de 7 días." />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; media-src 'self'; connect-src 'self' https://vmkldqb82b.execute-api.eu-south-2.amazonaws.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; upgrade-insecure-requests"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
+    <link rel="icon" type="image/png" href="assets/favicon.png" />
+    <link rel="stylesheet" href="styles.css?v=20260521-3" />
+  </head>
+  <body class="register-page">
+
+    <div class="register-root">
+
+      <!-- Panel izquierdo: marketing estático -->
+      <div class="register-left">
+        <a href="index.html" class="register-logo" aria-label="SmartBook AI - Inicio">
+          <img src="assets/smartbook-logo.png" alt="SmartBook AI" height="32" />
+        </a>
+
+        <div class="register-marketing">
+          <p class="register-trial-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            7 días de prueba gratuita
+          </p>
+
+          <h2 class="register-hero-heading">
+            Empieza hoy,<br>
+            <span>sin complicaciones</span>
+          </h2>
+          <p class="register-hero-sub">Automatiza tu contabilidad desde el primer día. Sin coste durante los primeros 7 días. Cancela cuando quieras.</p>
+
+          <ul class="register-features-list">
+            <li>
+              <span class="register-feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </span>
+              <span>
+                <strong>Facturas en segundos</strong>
+                <span>Sube un PDF y la IA extrae todos los datos automáticamente.</span>
+              </span>
+            </li>
+            <li>
+              <span class="register-feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              </span>
+              <span>
+                <strong>Control total de tu negocio</strong>
+                <span>Ingresos, gastos y resultados en un panel claro y actualizado.</span>
+              </span>
+            </li>
+            <li>
+              <span class="register-feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </span>
+              <span>
+                <strong>Sin riesgos</strong>
+                <span>7 días gratis. Solo se cobra si decides quedarte.</span>
+              </span>
+            </li>
+          </ul>
+
+          <div class="register-how-it-works">
+            <p class="register-how-label">CÓMO FUNCIONA</p>
+            <ol class="register-steps">
+              <li><span class="register-step-num">1</span> Crea tu cuenta y elige tu plan</li>
+              <li><span class="register-step-num">2</span> Confirma tu email y añade tu tarjeta</li>
+              <li><span class="register-step-num">3</span> <strong>7 días gratis</strong> — cancela antes si no te convence</li>
+              <li><span class="register-step-num">4</span> Tras el trial, cobro automático mensual</li>
+            </ol>
+          </div>
+        </div>
+
+        <p class="register-left-footer">© 2025 SmartBook AI</p>
+      </div>
+
+      <!-- Panel derecho: tarjeta formulario -->
+      <div class="register-right">
+        <div class="reg-card">
+
+          <div class="reg-card-icon" aria-hidden="true">
+            <img src="assets/favicon.png" alt="" width="36" height="36" />
+          </div>
+          <h1 class="reg-card-title">Crea tu cuenta</h1>
+          <p class="reg-card-sub"><strong>7 días gratis</strong> · Sin compromiso · Cancela cuando quieras</p>
+
+          <form class="reg-form" id="form-registro" novalidate>
+            <p id="registro-error" class="reg-error" role="alert" aria-live="polite"></p>
+
+            <!-- Selector de plan custom -->
+            <div class="reg-field">
+              <label class="reg-label">Plan *</label>
+              <div class="plan-selector" id="plan-selector">
+                <button type="button" class="plan-selector-btn" id="plan-selector-btn" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="plan-selector-preview" id="plan-selector-preview">
+                    <span class="plan-selector-placeholder">Selecciona un plan</span>
+                  </span>
+                  <svg class="plan-selector-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="plan-selector-panel" id="plan-selector-panel" role="listbox">
+                  <!-- Starter -->
+                  <div class="plan-opt" data-plan="starter" role="option" tabindex="0">
+                    <div class="plan-opt-thumb plan-opt-thumb--starter">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    </div>
+                    <div class="plan-opt-info">
+                      <strong>Starter</strong>
+                      <span>9,99€/mes</span>
+                    </div>
+                    <span class="plan-opt-badge plan-opt-badge--ok">Disponible</span>
+                  </div>
+                  <!-- Lite -->
+                  <div class="plan-opt" data-plan="lite" role="option" tabindex="0">
+                    <div class="plan-opt-thumb plan-opt-thumb--lite">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </div>
+                    <div class="plan-opt-info">
+                      <strong>Lite</strong>
+                      <span>29,99€/mes</span>
+                    </div>
+                    <span class="plan-opt-badge plan-opt-badge--ok">Disponible</span>
+                  </div>
+                  <!-- Smart -->
+                  <div class="plan-opt plan-opt--soon" data-plan="smart" role="option" tabindex="0" aria-disabled="true">
+                    <div class="plan-opt-thumb plan-opt-thumb--smart">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a8 8 0 0 1 8 8c0 3-1.5 5.5-4 7l-1 5H9l-1-5C5.5 15.5 4 13 4 10a8 8 0 0 1 8-8z"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                    </div>
+                    <div class="plan-opt-info">
+                      <strong>Smart</strong>
+                      <span>49,99€/mes</span>
+                    </div>
+                    <span class="plan-opt-badge plan-opt-badge--soon">Próximamente</span>
+                  </div>
+                  <!-- Power -->
+                  <div class="plan-opt plan-opt--soon" data-plan="power" role="option" tabindex="0" aria-disabled="true">
+                    <div class="plan-opt-thumb plan-opt-thumb--power">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                    </div>
+                    <div class="plan-opt-info">
+                      <strong>Power</strong>
+                      <span>79,99€/mes</span>
+                    </div>
+                    <span class="plan-opt-badge plan-opt-badge--soon">Próximamente</span>
+                  </div>
+                  <!-- Ultra -->
+                  <div class="plan-opt plan-opt--soon" data-plan="ultra" role="option" tabindex="0" aria-disabled="true">
+                    <div class="plan-opt-thumb plan-opt-thumb--ultra">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                    <div class="plan-opt-info">
+                      <strong>Ultra</strong>
+                      <span>129,99€/mes</span>
+                    </div>
+                    <span class="plan-opt-badge plan-opt-badge--soon">Próximamente</span>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="reg-plan" name="plan" />
+            </div>
+
+            <!-- Nombre empresa -->
+            <div class="reg-field">
+              <label class="reg-label" for="nombre-empresa">Nombre de empresa *</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                <input class="reg-input" type="text" id="nombre-empresa" name="nombreEmpresa" placeholder="Mi Empresa SL" autocomplete="organization" required maxlength="120" />
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div class="reg-field">
+              <label class="reg-label" for="reg-email">Correo electrónico *</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
+                <input class="reg-input" type="email" id="reg-email" name="email" placeholder="tu@empresa.com" autocomplete="email" required maxlength="160" />
+              </div>
+            </div>
+
+            <!-- Contraseña con 5 checks -->
+            <div class="reg-field" id="field-password">
+              <label class="reg-label" for="reg-password">Contraseña *</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <input class="reg-input" type="password" id="reg-password" name="password" placeholder="Mínimo 12 caracteres" autocomplete="new-password" required minlength="12" maxlength="128" />
+                <button type="button" class="btn-eye" id="btn-eye-reg" aria-label="Mostrar contraseña">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <div class="password-checks" id="password-checks" hidden aria-live="polite">
+                <span class="pw-check" data-rule="length"><span class="pw-dot" aria-hidden="true"></span>Mínimo 12 caracteres</span>
+                <span class="pw-check" data-rule="upper"><span class="pw-dot" aria-hidden="true"></span>Una letra mayúscula (A–Z)</span>
+                <span class="pw-check" data-rule="lower"><span class="pw-dot" aria-hidden="true"></span>Una letra minúscula (a–z)</span>
+                <span class="pw-check" data-rule="number"><span class="pw-dot" aria-hidden="true"></span>Al menos un número (0–9)</span>
+                <span class="pw-check" data-rule="symbol"><span class="pw-dot" aria-hidden="true"></span>Un símbolo (!@#$...)</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-register auth-form-submit">
+              <span>Registrarme gratis</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+
+            <div class="reg-divider">o continúa con</div>
+
+            <button type="button" class="btn-social" id="btn-google-register">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Continuar con Google
+            </button>
+
+            <p class="reg-login-link">¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a></p>
+          </form>
+
+        </div>
+      </div>
+
+    </div>
+
+    <script src="main.js?v=20260521-2" defer></script>
+  </body>
 </html>

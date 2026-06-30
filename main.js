@@ -306,13 +306,22 @@
   const isValidPassword = (value) => {
     const password = String(value || "");
     return (
-      password.length >= 8 &&
+      password.length >= 12 &&
       password.length <= 256 &&
       /[a-z]/.test(password) &&
       /[A-Z]/.test(password) &&
-      /\d/.test(password)
+      /\d/.test(password) &&
+      /[^a-zA-Z0-9\s]/.test(password)
     );
   };
+
+  const PASSWORD_RULES = [
+    { key: "length", test: (v) => v.length >= 12 },
+    { key: "upper",  test: (v) => /[A-Z]/.test(v) },
+    { key: "lower",  test: (v) => /[a-z]/.test(v) },
+    { key: "number", test: (v) => /\d/.test(v) },
+    { key: "symbol", test: (v) => /[^a-zA-Z0-9\s]/.test(v) },
+  ];
 
   const getNamedField = (form, name) => form.querySelector(`[name="${name}"]`);
 
@@ -376,7 +385,7 @@
     if (!isValidPassword(password)) {
       return {
         field,
-        message: "La contraseña debe tener entre 8 y 256 caracteres e incluir mayúscula, minúscula y número.",
+        message: "La contraseña debe tener al menos 12 caracteres e incluir mayúscula, minúscula y un símbolo.",
       };
     }
     return null;
@@ -581,6 +590,47 @@
     });
   };
 
+  const initTabsModal = () => {
+    const trigger  = document.getElementById("tabs-demo-trigger");
+    const modal    = document.getElementById("tabs-modal");
+    const closeBtn = document.getElementById("tabs-modal-close");
+    if (!trigger || !modal) return;
+
+    const openModal = () => {
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+      closeBtn?.focus();
+    };
+    const closeModal = () => {
+      modal.hidden = true;
+      document.body.style.overflow = "";
+      trigger.focus();
+    };
+
+    trigger.addEventListener("click", openModal);
+    trigger.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(); }
+    });
+    closeBtn?.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal.hidden) closeModal();
+    });
+
+    const modalBtns = [...modal.querySelectorAll("[data-modal-tab]")];
+    modalBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetPanel = modal.querySelector("#modal-tab-panel-" + btn.dataset.modalTab);
+        if (!targetPanel || btn.getAttribute("aria-selected") === "true") return;
+        modalBtns.forEach((b) => { b.classList.remove("is-active"); b.setAttribute("aria-selected", "false"); });
+        modal.querySelectorAll(".agency-tab-panel").forEach((p) => p.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-selected", "true");
+        targetPanel.classList.add("is-active");
+      });
+    });
+  };
+
   const parseJsonResponse = async (response) => {
     try {
       return await response.json();
@@ -630,26 +680,70 @@
   };
 
   const validateBackendRegisterForm = (form) => {
+    const planHidden = form.querySelector("#reg-plan");
+    const planError = planHidden && !planHidden.value
+      ? { field: document.getElementById("plan-selector-btn"), message: "Selecciona un plan para continuar." }
+      : null;
+
     const error =
-      validateTextField({ field: form.querySelector("#name"), label: "Nombre", min: 2, max: 80, required: true }) ||
-      validateRequiredPhoneField(form.querySelector("#phone")) ||
-      validateEmailField(form.querySelector("#email")) ||
-      validatePasswordField(form.querySelector("#password"));
+      planError ||
+      validateTextField({ field: form.querySelector("#nombre-empresa"), label: "Nombre de empresa", min: 2, max: 120, required: true }) ||
+      validateEmailField(form.querySelector("#reg-email")) ||
+      validatePasswordField(form.querySelector("#reg-password"));
 
     return !applyFirstFormError(form, error);
+  };
+
+  // ── Cognito config — reemplaza con los valores de tu CDK output ──────────
+  const COGNITO_REGION    = "eu-south-2";
+  const COGNITO_CLIENT_ID = "REEMPLAZA_CON_TU_USER_POOL_CLIENT_ID";
+  const COGNITO_ENDPOINT  = `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`;
+  const DASHBOARD_URL     = "https://app.smartbookai.es";
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const cognitoSignIn = async (email, password) => {
+    const response = await fetch(COGNITO_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-amz-json-1.1",
+        "X-Amz-Target": "AmazonCognitoIdentityProviderService.InitiateAuth",
+      },
+      body: JSON.stringify({
+        AuthFlow: "USER_PASSWORD_AUTH",
+        ClientId: COGNITO_CLIENT_ID,
+        AuthParameters: { USERNAME: email, PASSWORD: password },
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const err = new Error(data.message || "Error de autenticación");
+      err.code = data.__type || "UnknownError";
+      throw err;
+    }
+    return data.AuthenticationResult;
   };
 
   const initLoginForm = () => {
     if (!loginForm) return;
 
-    const params = new URLSearchParams(window.location.search);
-    const banner = loginForm.ownerDocument.querySelector("#login-banner");
+    const params       = new URLSearchParams(window.location.search);
+    const banner       = loginForm.ownerDocument.querySelector("#login-banner");
     const submitButton = loginForm.querySelector("#btn-login-submit");
-    const submitLabel = loginForm.querySelector("#btn-login-label");
+    const submitLabel  = loginForm.querySelector("#btn-login-label");
 
     if (params.get("registro") === "ok" && banner) {
       banner.textContent = "Cuenta creada correctamente. Ya puedes iniciar sesión.";
       banner.classList.add("ok");
+    }
+
+    const eyeBtn   = document.getElementById("btn-eye-login");
+    const pwdField = document.getElementById("login-password");
+    if (eyeBtn && pwdField) {
+      eyeBtn.addEventListener("click", () => {
+        const show = pwdField.type === "password";
+        pwdField.type = show ? "text" : "password";
+        eyeBtn.setAttribute("aria-label", show ? "Ocultar contraseña" : "Mostrar contraseña");
+      });
     }
 
     loginForm.addEventListener("input", (event) => {
@@ -663,53 +757,180 @@
       event.preventDefault();
       if (!validateLoginForm(loginForm)) return;
 
-      const email = normalizeEmail(loginForm.querySelector("#login-email")?.value);
+      const email    = normalizeEmail(loginForm.querySelector("#login-email")?.value);
       const password = String(loginForm.querySelector("#login-password")?.value || "");
 
       setButtonLoading(submitButton, submitLabel, "Entrando...", "Entrar", true);
       setFormFeedback(loginForm, "", "ok");
 
       try {
-        const response = await fetch(apiUrl("/api/login/"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ email, password }),
-        });
-        const data = await parseJsonResponse(response);
+        const auth = await cognitoSignIn(email, password);
 
-        if (!response.ok) {
-          setFormFeedback(loginForm, responseErrorMessage(data, "Credenciales incorrectas. Revisa tu email y contraseña."), "err");
-          return;
+        sessionStorage.setItem("sba_id_token",      auth.IdToken);
+        sessionStorage.setItem("sba_access_token",  auth.AccessToken);
+        sessionStorage.setItem("sba_refresh_token", auth.RefreshToken);
+
+        window.location.assign(DASHBOARD_URL);
+      } catch (err) {
+        switch (err.code) {
+          case "NotAuthorizedException":
+            if (pwdField) pwdField.value = "";
+            setFormFeedback(loginForm, "Correo electrónico o contraseña incorrectos.", "err");
+            break;
+          case "UserNotConfirmedException":
+            setFormFeedback(loginForm, "Debes confirmar tu cuenta antes de acceder. Revisa tu correo.", "err");
+            setTimeout(() => {
+              window.location.assign(`confirm.html?email=${encodeURIComponent(email)}`);
+            }, 2000);
+            break;
+          case "UserNotFoundException":
+            setFormFeedback(loginForm, "No existe una cuenta con ese correo electrónico.", "err");
+            break;
+          case "TooManyRequestsException":
+          case "LimitExceededException":
+            setFormFeedback(loginForm, "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.", "err");
+            break;
+          default:
+            setFormFeedback(loginForm, "No se pudo iniciar sesión. Inténtalo de nuevo en unos minutos.", "err");
         }
-
-        redirectToBackendTarget(data.redirect || "/");
-      } catch {
-        setFormFeedback(loginForm, "No se pudo conectar con el servidor. Inténtalo de nuevo en unos minutos.", "err");
       } finally {
         setButtonLoading(submitButton, submitLabel, "Entrando...", "Entrar", false);
       }
     });
   };
 
+  const PLAN_LABELS = {
+    starter: { name: "Starter", price: "9,99€/mes", thumb: "starter" },
+    lite:    { name: "Lite",    price: "29,99€/mes", thumb: "lite" },
+    smart:   { name: "Smart",   price: "49,99€/mes", thumb: "smart" },
+    power:   { name: "Power",   price: "79,99€/mes", thumb: "power" },
+    ultra:   { name: "Ultra",   price: "129,99€/mes", thumb: "ultra" },
+  };
+
+  const initPlanSelector = () => {
+    const btn     = document.getElementById("plan-selector-btn");
+    const panel   = document.getElementById("plan-selector-panel");
+    const hidden  = document.getElementById("reg-plan");
+    const preview = document.getElementById("plan-selector-preview");
+    if (!btn || !panel || !hidden || !preview) return;
+
+    const opts = panel.querySelectorAll(".plan-opt:not(.plan-opt--soon)");
+
+    const selectPlan = (planKey) => {
+      hidden.value = planKey;
+      const meta = PLAN_LABELS[planKey];
+      if (meta) {
+        preview.innerHTML = `
+          <div class="plan-opt-thumb plan-opt-thumb--${meta.thumb}">
+            ${getThumbSVG(planKey)}
+          </div>
+          <span><strong>${meta.name}</strong> &nbsp;${meta.price}</span>`;
+      }
+      panel.querySelectorAll(".plan-opt").forEach((o) => o.classList.remove("is-selected"));
+      panel.querySelector(`[data-plan="${planKey}"]`)?.classList.add("is-selected");
+      closePanel();
+    };
+
+    const getThumbSVG = (key) => {
+      const icons = {
+        starter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+        lite:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+        smart:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a8 8 0 0 1 8 8c0 3-1.5 5.5-4 7l-1 5H9l-1-5C5.5 15.5 4 13 4 10a8 8 0 0 1 8-8z"/><line x1="9" y1="17" x2="15" y2="17"/></svg>',
+        power:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>',
+        ultra:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
+      };
+      return icons[key] || "";
+    };
+
+    const openPanel = () => {
+      panel.classList.add("is-open");
+      btn.setAttribute("aria-expanded", "true");
+    };
+
+    const closePanel = () => {
+      panel.classList.remove("is-open");
+      btn.setAttribute("aria-expanded", "false");
+    };
+
+    btn.addEventListener("click", () => {
+      panel.classList.contains("is-open") ? closePanel() : openPanel();
+    });
+
+    opts.forEach((opt) => {
+      opt.addEventListener("click", () => selectPlan(opt.dataset.plan));
+      opt.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPlan(opt.dataset.plan); }
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!btn.contains(e.target) && !panel.contains(e.target)) closePanel();
+    });
+
+    // Pre-seleccionar si hay ?plan= en la URL
+    const urlPlan = new URLSearchParams(window.location.search).get("plan")?.toLowerCase();
+    if (urlPlan && PLAN_LABELS[urlPlan] && !panel.querySelector(`[data-plan="${urlPlan}"]`)?.classList.contains("plan-opt--soon")) {
+      selectPlan(urlPlan);
+    }
+  };
+
+  const initPasswordChecks = () => {
+    const passwordField = document.querySelector("#reg-password");
+    const checksContainer = document.querySelector("#password-checks");
+    if (!passwordField || !checksContainer) return;
+
+    const updateChecks = () => {
+      const value = passwordField.value;
+      const hasInput = value.length > 0;
+      PASSWORD_RULES.forEach(({ key, test }) => {
+        const el = checksContainer.querySelector(`[data-rule="${key}"]`);
+        if (!el) return;
+        const ok = test(value);
+        el.classList.toggle("is-ok", ok);
+        el.classList.toggle("is-fail", hasInput && !ok);
+      });
+    };
+
+    passwordField.addEventListener("focus", () => {
+      checksContainer.hidden = false;
+      updateChecks();
+    });
+    passwordField.addEventListener("input", updateChecks);
+  };
+
+  const PLAN_META = {
+    starter: {
+      name: "Starter",
+      price: "9,99€/mes",
+      priceId: "price_1TckmxA8fYEQHYCQ4bwd78qR",
+      features: ["Generación manual de facturas", "Gestión básica de clientes", "Panel básico", "Exportación simple de facturas"],
+    },
+    lite: {
+      name: "Lite",
+      price: "29,99€/mes",
+      priceId: "price_1TUqacA8fYEQHYCQA3bkh3eb",
+      features: ["Todo lo del plan Starter", "Subida de facturas en PDF", "Extracción automática con IA", "Facturas recibidas y emitidas"],
+    },
+  };
+
   const initRegisterForm = () => {
     if (!registerForm) return;
 
-    const params = new URLSearchParams(window.location.search);
-    const selectedPlan = normalizePlan(params.get("plan"));
-    const storedDraft = sessionStorage.getItem(REGISTER_DRAFT_KEY);
+    initPlanSelector();
+    initPasswordChecks();
 
-    if (storedDraft) {
-      try {
-        const draft = JSON.parse(storedDraft);
-        if (draft && typeof draft === "object") {
-          if (draft.nombre) registerForm.querySelector("#name").value = sanitizeSingleLine(draft.nombre, 80);
-          if (draft.telefono) registerForm.querySelector("#phone").value = sanitizePhone(draft.telefono);
-          if (draft.email) registerForm.querySelector("#email").value = normalizeEmail(draft.email);
-        }
-      } catch {
-        sessionStorage.removeItem(REGISTER_DRAFT_KEY);
-      }
+    // Eye toggle
+    const eyeBtn = document.getElementById("btn-eye-reg");
+    const pwdInput = document.getElementById("reg-password");
+    if (eyeBtn && pwdInput) {
+      eyeBtn.addEventListener("click", () => {
+        const show = pwdInput.type === "password";
+        pwdInput.type = show ? "text" : "password";
+        eyeBtn.querySelector("svg").innerHTML = show
+          ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+        eyeBtn.setAttribute("aria-label", show ? "Ocultar contraseña" : "Mostrar contraseña");
+      });
     }
 
     registerForm.addEventListener("input", (event) => {
@@ -723,48 +944,67 @@
       event.preventDefault();
       if (!validateBackendRegisterForm(registerForm)) return;
 
-      const payload = {
-        nombre: sanitizeSingleLine(registerForm.querySelector("#name")?.value, 80),
-        telefono: sanitizePhone(registerForm.querySelector("#phone")?.value),
-        email: normalizeEmail(registerForm.querySelector("#email")?.value),
-        password: String(registerForm.querySelector("#password")?.value || ""),
-        plan: selectedPlan,
-      };
-
-      if (payload.plan === DEFAULT_PLAN) {
-        sessionStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify({
-          nombre: payload.nombre,
-          telefono: payload.telefono,
-          email: payload.email,
-        }));
-        window.location.assign("planes.html");
-        return;
-      }
+      const nombreEmpresa = sanitizeSingleLine(registerForm.querySelector("#nombre-empresa")?.value, 120);
+      const email         = normalizeEmail(registerForm.querySelector("#reg-email")?.value);
+      const password      = String(registerForm.querySelector("#reg-password")?.value || "");
+      const plan          = normalizePlan(registerForm.querySelector("#reg-plan")?.value);
 
       const submitButton = registerForm.querySelector(".auth-form-submit");
-      const submitLabel = submitButton?.querySelector("span");
-      setButtonLoading(submitButton, submitLabel, "Creando cuenta...", "Crear cuenta", true);
-      setFormFeedback(registerForm, "", "ok");
+      const submitLabel  = submitButton?.querySelector("span");
+      const errorEl      = document.getElementById("registro-error");
+
+      const showRegError  = (msg) => { if (errorEl) errorEl.textContent = msg; };
+      const clearRegError = ()    => { if (errorEl) errorEl.textContent = ""; };
+
+      const SERVER_ERROR_MSG = "Ha ocurrido un problema en nuestros servidores en España, por favor inténtelo de nuevo en unos minutos.";
+
+      clearRegError();
+      setButtonLoading(submitButton, submitLabel, "Procesando registro seguro...", "Registrarme gratis", true);
 
       try {
-        const response = await fetch(apiUrl("/api/register/"), {
+        const response = await fetch("https://vmkldqb82b.execute-api.eu-south-2.amazonaws.com/prod/registro/solicitar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ nombreEmpresa, email, password, plan }),
         });
+
         const data = await parseJsonResponse(response);
 
-        if (!response.ok) {
-          setFormFeedback(registerForm, responseErrorMessage(data, "No se pudo completar el registro. Revisa los datos e inténtalo de nuevo."), "err");
+        if (response.status === 200 || response.status === 201) {
+          const stripeUrl = typeof data.stripeUrl === "string" ? data.stripeUrl : "";
+          if (stripeUrl.startsWith("https://checkout.stripe.com/")) {
+            window.location.href = stripeUrl;
+            return;
+          }
+          showRegError("No se pudo iniciar el proceso de pago. Por favor, inténtalo de nuevo.");
           return;
         }
 
-        sessionStorage.removeItem(REGISTER_DRAFT_KEY);
-        window.location.assign(`confirm.html?email=${encodeURIComponent(payload.email)}`);
+        if (response.status === 409) {
+          showRegError(sanitizeSingleLine(data.message || "Este email o empresa ya está registrado. Si ya tienes cuenta, inicia sesión.", 240));
+          return;
+        }
+
+        if (response.status === 422) {
+          showRegError("La contraseña no cumple los requisitos de seguridad. Revisa que tenga al menos 12 caracteres, una mayúscula, una minúscula, un número y un símbolo.");
+          return;
+        }
+
+        if (response.status === 400) {
+          showRegError(sanitizeSingleLine(data.message || "Los datos introducidos no son válidos. Por favor, revísalos.", 240));
+          return;
+        }
+
+        if (response.status >= 500) {
+          showRegError(SERVER_ERROR_MSG);
+          return;
+        }
+
+        showRegError(responseErrorMessage(data, "No se pudo completar el registro. Revisa los datos e inténtalo de nuevo."));
       } catch {
-        setFormFeedback(registerForm, "No se pudo conectar con el servidor. Inténtalo de nuevo en unos minutos.", "err");
+        showRegError(SERVER_ERROR_MSG);
       } finally {
-        setButtonLoading(submitButton, submitLabel, "Creando cuenta...", "Crear cuenta", false);
+        setButtonLoading(submitButton, submitLabel, "Procesando registro seguro...", "Registrarme gratis", false);
       }
     });
   };
@@ -1319,6 +1559,173 @@
   window.addEventListener("resize", queueLayoutUpdate);
 
   paintHeadmarkPurple();
+  const initWebPreviewModal = () => {
+    const trigger  = document.getElementById("web-demo-trigger");
+    const modal    = document.getElementById("web-modal");
+    const closeBtn = document.getElementById("web-modal-close");
+    if (!trigger || !modal) return;
+
+    const openModal = () => {
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+      closeBtn?.focus();
+    };
+
+    const closeModal = () => {
+      modal.hidden = true;
+      document.body.style.overflow = "";
+      trigger.focus();
+    };
+
+    trigger.addEventListener("click", openModal);
+    trigger.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(); }
+    });
+    closeBtn?.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal && !modal.hidden) closeModal();
+    });
+  };
+
+  const initDemoChatModal = () => {
+    const trigger     = document.getElementById("chatbot-demo-trigger");
+    const modal       = document.getElementById("chatbot-modal");
+    const closeBtn    = document.getElementById("chatbot-modal-close");
+    const form        = document.getElementById("demo-chat-form");
+    const messagesEl  = document.getElementById("demo-chat-messages");
+    const inputEl     = document.getElementById("demo-chat-input");
+    const sendBtn     = document.getElementById("demo-chat-send");
+    if (!trigger || !modal) return;
+
+    const FLOWISE_URL = "https://cloud.flowiseai.com/api/v1/prediction/26728be9-ac01-435c-a80b-69df66bc87c3";
+    const MAX_MSGS    = 5;
+    let sending       = false;
+    let msgCount      = 0;
+
+    const openModal = () => {
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+      inputEl?.focus();
+    };
+
+    const closeModal = () => {
+      modal.hidden = true;
+      document.body.style.overflow = "";
+      trigger.focus();
+    };
+
+    trigger.addEventListener("click", openModal);
+    trigger.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(); }
+    });
+    closeBtn?.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal && !modal.hidden) closeModal();
+    });
+
+    const addMsg = (text, isUser) => {
+      const d = document.createElement("div");
+      d.className = "results-chat-msg " + (isUser ? "results-chat-msg-user" : "results-chat-msg-bot");
+      d.textContent = text;
+      messagesEl.appendChild(d);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return d;
+    };
+
+    form?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const question = inputEl.value.trim();
+      if (!question || sending) return;
+
+      if (msgCount >= MAX_MSGS) {
+        addMsg("Has alcanzado el límite de la demo. ¡Contáctanos para saber más!", false);
+        inputEl.disabled = true;
+        sendBtn.disabled = true;
+        return;
+      }
+
+      sending = true;
+      msgCount++;
+      inputEl.value = "";
+      sendBtn.disabled = true;
+      addMsg(question, true);
+
+      const loader = addMsg("···", false);
+      loader.classList.add("results-chat-msg-loading");
+
+      try {
+        const res = await fetch(FLOWISE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+        const data = await res.json();
+        loader.textContent = data.text || data.answer || "Sin respuesta.";
+      } catch {
+        loader.textContent = "Error al conectar con el asistente. Inténtalo de nuevo.";
+      } finally {
+        loader.classList.remove("results-chat-msg-loading");
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        sending = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
+      }
+    });
+  };
+
+  const initPagoExitoso = () => {
+    const card = document.querySelector(".pe-card");
+    if (!card) return;
+    const sessionId = new URLSearchParams(window.location.search).get("session_id");
+    const noteEl    = document.getElementById("pe-session-note");
+    if (sessionId && noteEl) {
+      noteEl.textContent = `Ref: ${sessionId}`;
+      noteEl.hidden = false;
+      noteEl.removeAttribute("aria-hidden");
+    }
+  };
+
+  const STRIPE_LINK_API = "https://vmkldqb82b.execute-api.eu-south-2.amazonaws.com/prod/auth/stripe-link";
+
+  const initVerificarPago = () => {
+    const loadingEl = document.getElementById("vp-loading");
+    const errorEl   = document.getElementById("vp-error");
+    const errorMsg  = document.getElementById("vp-error-msg");
+    if (!loadingEl || !errorEl) return;
+
+    const showError = (msg) => {
+      loadingEl.hidden = true;
+      if (errorMsg) errorMsg.textContent = msg;
+      errorEl.hidden = false;
+    };
+
+    const token = new URLSearchParams(window.location.search).get("token");
+
+    if (!token) {
+      showError("El enlace de verificación no contiene un token válido. Por favor, usa el enlace que recibiste en tu correo.");
+      return;
+    }
+
+    fetch(STRIPE_LINK_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (ok && data.url) {
+          window.location.href = data.url;
+        } else {
+          showError(data.message || "El enlace ha caducado o no es válido. Los enlaces expiran a los 15 minutos.");
+        }
+      })
+      .catch(() => {
+        showError("No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.");
+      });
+  };
+
   setNavbarState();
   initRevealAnimations();
   initLogoMarquee();
@@ -1332,4 +1739,9 @@
   initResultsCarousel();
   initResultsChat();
   initAgencyTabs();
+  initTabsModal();
+  initWebPreviewModal();
+  initDemoChatModal();
+  initVerificarPago();
+  initPagoExitoso();
 })();
