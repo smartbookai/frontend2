@@ -694,12 +694,51 @@
     return !applyFirstFormError(form, error);
   };
 
-  // ── Cognito config — reemplaza con los valores de tu CDK output ──────────
-  const COGNITO_REGION    = "eu-south-2";
-  const COGNITO_CLIENT_ID = "REEMPLAZA_CON_TU_USER_POOL_CLIENT_ID";
-  const COGNITO_ENDPOINT  = `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`;
-  const DASHBOARD_URL     = "https://app.smartbookai.es";
+  // ── Cognito config (valores inyectados desde config.js vía window.SBA_CONFIG) ──
+  const _cfg = window.SBA_CONFIG || {};
+  const COGNITO_REGION    = _cfg.COGNITO_REGION    || "eu-south-2";
+  const COGNITO_CLIENT_ID = _cfg.COGNITO_CLIENT_ID || "";
+  const COGNITO_ENDPOINT  = _cfg.COGNITO_ENDPOINT  || `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`;
+  const APP_CALLBACK_URL    = "https://app.smartbookai.es/auth/callback";
+  const ADMIN_GROUP         = "dimiadmin";
+  const SBA_ID_TOKEN_KEY      = "sba_id_token";
+  const SBA_ACCESS_TOKEN_KEY  = "sba_access_token";
+  const SBA_REFRESH_TOKEN_KEY = "sba_refresh_token";
   // ─────────────────────────────────────────────────────────────────────────
+
+  const decodeJwtPayload = (token) => {
+    try {
+      const base64Url = String(token || "").split(".")[1] || "";
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
+      return JSON.parse(atob(padded));
+    } catch {
+      return null;
+    }
+  };
+
+  const getIdToken    = () => sessionStorage.getItem(SBA_ID_TOKEN_KEY);
+  const getAccessToken = () => sessionStorage.getItem(SBA_ACCESS_TOKEN_KEY);
+  const isAuthenticated = () => Boolean(getIdToken());
+
+  const logout = () => {
+    sessionStorage.removeItem(SBA_ID_TOKEN_KEY);
+    sessionStorage.removeItem(SBA_ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(SBA_REFRESH_TOKEN_KEY);
+    window.location.assign("login.html");
+  };
+
+  const requireAuth = () => {
+    if (!isAuthenticated()) {
+      window.location.replace("login.html");
+      return false;
+    }
+    return true;
+  };
+
+  // Los tokens viajan como cookies (sba_id_token y sba_access_token), no en la URL.
+  // El enrutamiento admin/onboarding/dashboard lo decide /auth/callback en Next.js.
+  const buildCallbackUrl = () => APP_CALLBACK_URL;
 
   const cognitoSignIn = async (email, password) => {
     const response = await fetch(COGNITO_ENDPOINT, {
@@ -766,11 +805,18 @@
       try {
         const auth = await cognitoSignIn(email, password);
 
-        sessionStorage.setItem("sba_id_token",      auth.IdToken);
-        sessionStorage.setItem("sba_access_token",  auth.AccessToken);
-        sessionStorage.setItem("sba_refresh_token", auth.RefreshToken);
+        sessionStorage.setItem(SBA_ID_TOKEN_KEY,      auth.IdToken);
+        sessionStorage.setItem(SBA_ACCESS_TOKEN_KEY,  auth.AccessToken);
+        sessionStorage.setItem(SBA_REFRESH_TOKEN_KEY, auth.RefreshToken);
 
-        window.location.assign(DASHBOARD_URL);
+        // Cookies cross-subdomain para que app.smartbookai.es las lea:
+        //   sba_id_token     → middleware de Next.js (server-side, aws-jwt-verify)
+        //   sba_access_token → /auth/callback (client-side, hidrata localStorage)
+        const cookieBase = "Domain=smartbookai.es; Path=/; Max-Age=3600; Secure; SameSite=Strict";
+        document.cookie = `sba_id_token=${encodeURIComponent(auth.IdToken)}; ${cookieBase}`;
+        document.cookie = `sba_access_token=${encodeURIComponent(auth.AccessToken)}; ${cookieBase}`;
+
+        window.location.assign(buildCallbackUrl());
       } catch (err) {
         switch (err.code) {
           case "NotAuthorizedException":
