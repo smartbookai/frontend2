@@ -1008,10 +1008,10 @@
       setButtonLoading(submitButton, submitLabel, "Procesando registro seguro...", "Registrarme gratis", true);
 
       try {
-        const response = await fetch("https://vmkldqb82b.execute-api.eu-south-2.amazonaws.com/prod/registro/solicitar", {
+        const response = await fetch("https://vmkldqb82b.execute-api.eu-south-2.amazonaws.com/prod/auth/solicitar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nombreEmpresa, email, password, plan }),
+          body: JSON.stringify({ nombreEmpresa, email, password, planId: plan }),
         });
 
         const data = await parseJsonResponse(response);
