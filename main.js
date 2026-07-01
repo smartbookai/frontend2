@@ -697,7 +697,7 @@
   // ── Cognito config (valores inyectados desde config.js vía window.SBA_CONFIG) ──
   const _cfg = window.SBA_CONFIG || {};
   const COGNITO_REGION    = _cfg.COGNITO_REGION    || "eu-south-2";
-  const COGNITO_CLIENT_ID = _cfg.COGNITO_CLIENT_ID || "";
+  const COGNITO_CLIENT_ID = _cfg.COGNITO_CLIENT_ID || "6ef3amad75lbch7c008ua7dmfd";
   const COGNITO_ENDPOINT  = _cfg.COGNITO_ENDPOINT  || `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`;
   const APP_CALLBACK_URL    = "https://app.smartbookai.es/auth/callback";
   const ADMIN_GROUP         = "dimiadmin";
