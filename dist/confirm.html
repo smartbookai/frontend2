@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confirma tu cuenta | SmartBook AI</title>
+    <meta name="description" content="Te hemos enviado un correo de confirmación. Accede a él para activar tu cuenta SmartBook AI." />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; media-src 'self'; connect-src 'self' https://app.smartbookai.es; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; upgrade-insecure-requests"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
+    <link rel="icon" type="image/png" href="/assets/favicon-tlTBH_v_.png" />
+    <link rel="stylesheet" crossorigin href="/assets/styles-BY9euaB8.css">
+  </head>
+  <body class="auth-page site-page">
+    <header class="navbar" id="navbar">
+      <div class="container nav-inner">
+        <a href="index.html" class="logo" aria-label="SmartBook AI - Inicio">
+          <img src="/assets/smartbook-logo-C4rPmHgj.png" alt="SmartBook AI" class="logo-img" height="36" />
+        </a>
+        <a href="index.html" class="nav-headmark" aria-label="SmartBook AI - Inicio">
+          <canvas class="nav-headmark-canvas" width="34" height="34" aria-hidden="true"></canvas>
+        </a>
+        <nav class="nav-links" aria-label="Enlaces principales">
+          <span class="nav-pill" aria-hidden="true"></span>
+          <a href="autonomos.html" data-label="Autónomos"><span>Autónomos</span></a>
+          <a href="contacto.html" data-label="Contáctanos"><span>Contáctanos</span></a>
+          <a href="about.html" data-label="Quiénes somos"><span>Quiénes somos</span></a>
+          <a href="planes.html" data-label="Planes de suscripción"><span>Planes de suscripción</span></a>
+        </nav>
+        <div class="nav-actions">
+          <a class="btn btn-login" href="login.html" data-label="Iniciar sesión">
+            <span>Iniciar sesión</span>
+          </a>
+          <a class="btn btn-primary" href="register.html" data-label="Regístrate">
+            <span>Regístrate</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="site-page-hero">
+        <div class="container site-page-hero-inner">
+          <p class="site-page-eyebrow">CUENTA CREADA</p>
+          <h1>Un paso más</h1>
+          <p>Confirma tu dirección de correo para activar tu cuenta.</p>
+        </div>
+      </section>
+
+      <section class="confirm-section">
+        <div class="container">
+          <div class="confirm-card reveal">
+            <div class="confirm-icon-wrap" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <polyline points="2,4 12,13 22,4" />
+              </svg>
+            </div>
+            <h1>Revisa tu correo</h1>
+            <p class="confirm-intro">Te hemos enviado un mensaje de confirmación a:</p>
+            <div class="confirm-email-pill" id="confirm-email" aria-live="polite">tu dirección de correo</div>
+            <div class="confirm-steps" role="list">
+              <p class="confirm-step" role="listitem">
+                <span class="step-num" aria-hidden="true">1</span>
+                <span>Abre tu bandeja de entrada y busca un correo de <strong>SmartBook AI</strong>.</span>
+              </p>
+              <p class="confirm-step" role="listitem">
+                <span class="step-num" aria-hidden="true">2</span>
+                <span>Haz clic en el <strong>enlace de confirmación</strong> para activar tu cuenta.</span>
+              </p>
+              <p class="confirm-step" role="listitem">
+                <span class="step-num" aria-hidden="true">3</span>
+                <span>Ya podrás acceder a SmartBook AI y disfrutar de tu prueba gratuita.</span>
+              </p>
+            </div>
+            <p class="confirm-spam">¿No encuentras el correo? Revisa tu carpeta de <strong>spam</strong> o correo no deseado.</p>
+            <div class="resend-wrap">
+              <p class="resend-label">¿No te ha llegado el correo?</p>
+              <button type="button" id="btn-resend" class="btn-resend">
+                <span id="btn-resend-label">Reenviar correo</span>
+              </button>
+              <p id="resend-feedback" class="resend-feedback" role="alert" aria-live="polite"></p>
+            </div>
+            <div class="confirm-notice">
+              Si el problema persiste, prueba a <a href="register.html">registrarte de nuevo</a> en unos minutos.
+              Si el problema continúa, <a href="contacto.html">contacta con nuestro equipo</a>.
+            </div>
+            <hr class="confirm-divider" />
+            <p class="confirm-thanks">Gracias por confiar en <strong>SmartBook AI</strong>.</p>
+            <a href="index.html" class="confirm-cta">Volver al inicio</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <a href="index.html" class="logo" aria-label="SmartBook AI">
+          <img src="/assets/smartbook-logo-C4rPmHgj.png" alt="SmartBook AI" class="logo-img logo-footer" height="28" />
+        </a>
+        <nav aria-label="Enlaces footer">
+          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">Política de Privacidad</a>
+          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">Términos y Condiciones</a>
+          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">Cookies</a>
+          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">DPA</a>
+          <a href="#" data-frontend-placeholder data-placeholder-message="Página legal preparada para conexión futura.">Aviso legal</a>
+        </nav>
+        <p>© 2025 SmartBook AI</p>
+      </div>
+    </footer>
+    <script src="main.js?v=20260521-2" defer></script>
+  </body>
+</html>

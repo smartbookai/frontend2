@@ -1,3 +1,5 @@
+import { signIn } from './src/auth/cognito.js';
+
 (() => {
   "use strict";
 
@@ -694,11 +696,7 @@
     return !applyFirstFormError(form, error);
   };
 
-  // ── Cognito config (valores inyectados desde config.js vía window.SBA_CONFIG) ──
-  const _cfg = window.SBA_CONFIG || {};
-  const COGNITO_REGION    = _cfg.COGNITO_REGION    || "eu-south-2";
-  const COGNITO_CLIENT_ID = _cfg.COGNITO_CLIENT_ID || "6ef3amad75lbch7c008ua7dmfd";
-  const COGNITO_ENDPOINT  = _cfg.COGNITO_ENDPOINT  || `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`;
+  // Cognito config eliminada — las credenciales viven en import.meta.env (Vite, tiempo de compilación)
   const APP_CALLBACK_URL    = "https://app.smartbookai.es/auth/callback";
   const ADMIN_GROUP         = "dimiadmin";
   const SBA_ID_TOKEN_KEY      = "sba_id_token";
@@ -740,27 +738,8 @@
   // El enrutamiento admin/onboarding/dashboard lo decide /auth/callback en Next.js.
   const buildCallbackUrl = () => APP_CALLBACK_URL;
 
-  const cognitoSignIn = async (email, password) => {
-    const response = await fetch(COGNITO_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-amz-json-1.1",
-        "X-Amz-Target": "AmazonCognitoIdentityProviderService.InitiateAuth",
-      },
-      body: JSON.stringify({
-        AuthFlow: "USER_PASSWORD_AUTH",
-        ClientId: COGNITO_CLIENT_ID,
-        AuthParameters: { USERNAME: email, PASSWORD: password },
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      const err = new Error(data.message || "Error de autenticación");
-      err.code = data.__type || "UnknownError";
-      throw err;
-    }
-    return data.AuthenticationResult;
-  };
+  // SRP: la contraseña nunca viaja en plano — amazon-cognito-identity-js negocia la prueba criptográfica
+  const cognitoSignIn = signIn;
 
   const initLoginForm = () => {
     if (!loginForm) return;
