@@ -697,7 +697,7 @@ import { signIn } from './src/auth/cognito.js';
   };
 
   // Cognito config eliminada — las credenciales viven en import.meta.env (Vite, tiempo de compilación)
-  const APP_CALLBACK_URL    = "https://app.smartbookai.es/auth/callback";
+  const APP_CALLBACK_URL    = `${import.meta.env.VITE_APP_URL}/auth/callback`;
   const ADMIN_GROUP         = "dimiadmin";
   const SBA_ID_TOKEN_KEY      = "sba_id_token";
   const SBA_ACCESS_TOKEN_KEY  = "sba_access_token";
