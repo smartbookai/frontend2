@@ -696,8 +696,7 @@ import { signIn } from './src/auth/cognito.js';
     return !applyFirstFormError(form, error);
   };
 
-  // Cognito config eliminada — las credenciales viven en import.meta.env (Vite, tiempo de compilación)
-  const APP_CALLBACK_URL    = `${import.meta.env.VITE_APP_URL}/auth/callback`;
+  const APP_CALLBACK_URL    = 'https://app.smartbookai.es/auth/callback';
   const ADMIN_GROUP         = "dimiadmin";
   const SBA_ID_TOKEN_KEY      = "sba_id_token";
   const SBA_ACCESS_TOKEN_KEY  = "sba_access_token";
@@ -997,8 +996,7 @@ import { signIn } from './src/auth/cognito.js';
 
         if (response.status === 200 || response.status === 201) {
           localStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify({ email, nombreEmpresa, plan }));
-          setFormFeedback(registerForm, "¡Listo! Te hemos enviado un correo. Haz clic en el enlace para continuar con el pago.", "ok");
-          if (submitButton) submitButton.disabled = true;
+          window.location.href = `confirm.html?email=${encodeURIComponent(email)}`;
           return;
         }
 
