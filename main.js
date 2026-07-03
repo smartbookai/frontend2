@@ -996,12 +996,9 @@ import { signIn } from './src/auth/cognito.js';
         const data = await parseJsonResponse(response);
 
         if (response.status === 200 || response.status === 201) {
-          const stripeUrl = typeof data.stripeUrl === "string" ? data.stripeUrl : "";
-          if (stripeUrl.startsWith("https://checkout.stripe.com/")) {
-            window.location.href = stripeUrl;
-            return;
-          }
-          showRegError("No se pudo iniciar el proceso de pago. Por favor, inténtalo de nuevo.");
+          localStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify({ email, nombreEmpresa, plan }));
+          setFormFeedback(registerForm, "¡Listo! Te hemos enviado un correo. Haz clic en el enlace para continuar con el pago.", "ok");
+          if (submitButton) submitButton.disabled = true;
           return;
         }
 
