@@ -696,7 +696,10 @@ import { signIn } from './src/auth/cognito.js';
     return !applyFirstFormError(form, error);
   };
 
-  const APP_CALLBACK_URL    = 'https://app.smartbookai.es/auth/callback';
+  // VITE_APP_URL apunta a sba-frontend (http://localhost:3000 en dev, https://app.smartbookai.es en prod).
+  // OJO: no usamos window.location.origin — este script corre en el origen de la landing (frontend2),
+  // no en el de la app, así que apuntaría al puerto/dominio equivocado.
+  const APP_CALLBACK_URL    = `${import.meta.env.VITE_APP_URL || 'https://app.smartbookai.es'}/auth/callback`;
   const ADMIN_GROUP         = "dimiadmin";
   const SBA_ID_TOKEN_KEY      = "sba_id_token";
   const SBA_ACCESS_TOKEN_KEY  = "sba_access_token";
@@ -790,7 +793,12 @@ import { signIn } from './src/auth/cognito.js';
         // Cookies cross-subdomain para que app.smartbookai.es las lea:
         //   sba_id_token     → middleware de Next.js (server-side, aws-jwt-verify)
         //   sba_access_token → /auth/callback (client-side, hidrata localStorage)
-        const cookieBase = "Domain=smartbookai.es; Path=/; Max-Age=3600; Secure; SameSite=Strict";
+        // En localhost el navegador rechaza una cookie con Domain=smartbookai.es (no coincide
+        // con el host actual), así que en dev se omite y el navegador la asocia al host actual.
+        const isLocalhost = window.location.hostname === "localhost";
+        const cookieBase = isLocalhost
+          ? "Path=/; Max-Age=3600; Secure; SameSite=Strict"
+          : "Domain=smartbookai.es; Path=/; Max-Age=3600; Secure; SameSite=Strict";
         document.cookie = `sba_id_token=${encodeURIComponent(auth.IdToken)}; ${cookieBase}`;
         document.cookie = `sba_access_token=${encodeURIComponent(auth.AccessToken)}; ${cookieBase}`;
 
