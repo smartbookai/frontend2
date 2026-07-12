@@ -5773,6 +5773,10 @@ body.register-page {
   letter-spacing: -0.02em;
 }
 
+.reg-card-title--tight {
+  margin-bottom: 4px;
+}
+
 .reg-card-sub {
   font-size: 0.88rem;
   color: #9b92b0;
