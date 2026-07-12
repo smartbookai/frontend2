@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "amazon-cognito-identity-js": "^6.3.12",
-    "aws-jwt-verify": "^5.2.1"
+    "aws-jwt-verify": "^5.2.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "vite": "^5.4.0"

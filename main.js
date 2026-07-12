@@ -1,4 +1,5 @@
-import { signIn } from './src/auth/cognito.js';
+import { login, setupAuthenticator, verifyAuthenticator } from './src/auth/api.js';
+import QRCode from 'qrcode';
 
 (() => {
   "use strict";
@@ -740,8 +741,64 @@ import { signIn } from './src/auth/cognito.js';
   // El enrutamiento admin/onboarding/dashboard lo decide /auth/callback en Next.js.
   const buildCallbackUrl = () => APP_CALLBACK_URL;
 
-  // SRP: la contraseña nunca viaja en plano — amazon-cognito-identity-js negocia la prueba criptográfica
-  const cognitoSignIn = signIn;
+  // Punto único de aterrizaje tras un login válido, con o sin MFA de por medio:
+  // guarda los tokens definitivos y redirige. registrationToken/session (los
+  // artefactos intermedios del MFA) nunca pasan por aquí ni se persisten.
+  const completeLogin = (tokens) => {
+    sessionStorage.setItem(SBA_ID_TOKEN_KEY,      tokens.IdToken);
+    sessionStorage.setItem(SBA_ACCESS_TOKEN_KEY,  tokens.AccessToken);
+    sessionStorage.setItem(SBA_REFRESH_TOKEN_KEY, tokens.RefreshToken);
+
+    // En localhost el navegador rechaza una cookie con Domain=smartbookai.es (no coincide
+    // con el host actual), así que en dev se omite y el navegador la asocia al host actual.
+    const isLocalhost = window.location.hostname === "localhost";
+    const cookieBase = isLocalhost
+      ? "Path=/; Max-Age=3600; Secure; SameSite=Strict"
+      : "Domain=smartbookai.es; Path=/; Max-Age=3600; Secure; SameSite=Strict";
+    document.cookie = `sba_id_token=${encodeURIComponent(tokens.IdToken)}; ${cookieBase}`;
+    document.cookie = `sba_access_token=${encodeURIComponent(tokens.AccessToken)}; ${cookieBase}`;
+
+    window.location.assign(buildCallbackUrl());
+  };
+
+  // Cablea una fila de cajas de un dígito (autoavance, retroceso con backspace,
+  // pegado de los 6 dígitos de golpe) y llama a onComplete en cuanto se llenan.
+  const wireOtpInputs = (container, onComplete) => {
+    const boxes = Array.from(container.querySelectorAll(".otp-box"));
+    const getCode = () => boxes.map((box) => box.value).join("");
+
+    boxes.forEach((box, index) => {
+      box.addEventListener("input", () => {
+        box.value = box.value.replace(/[^0-9]/g, "").slice(0, 1);
+        box.classList.toggle("filled", box.value !== "");
+        if (box.value && index < boxes.length - 1) boxes[index + 1].focus();
+        if (getCode().length === boxes.length) onComplete(getCode());
+      });
+
+      box.addEventListener("keydown", (event) => {
+        if (event.key === "Backspace" && !box.value && index > 0) {
+          boxes[index - 1].focus();
+        }
+      });
+
+      box.addEventListener("paste", (event) => {
+        event.preventDefault();
+        const pasted = (event.clipboardData?.getData("text") || "").replace(/[^0-9]/g, "").slice(0, boxes.length);
+        pasted.split("").forEach((digit, i) => {
+          boxes[i].value = digit;
+          boxes[i].classList.add("filled");
+        });
+        const last = boxes[Math.min(pasted.length, boxes.length) - 1];
+        if (last) last.focus();
+        if (pasted.length === boxes.length) onComplete(pasted);
+      });
+    });
+
+    return {
+      reset: () => boxes.forEach((box) => { box.value = ""; box.classList.remove("filled"); }),
+      focusFirst: () => boxes[0]?.focus(),
+    };
+  };
 
   const initLoginForm = () => {
     if (!loginForm) return;
@@ -773,6 +830,110 @@ import { signIn } from './src/auth/cognito.js';
       }
     });
 
+    // ── Paneles de MFA (ocultos hasta que /auth/login diga lo contrario) ─────
+    const requiredPanel        = document.getElementById("mfa-required-panel");
+    const enforcementPanel     = document.getElementById("mfa-enforcement-panel");
+    const requiredEmailEl      = document.getElementById("mfa-required-email");
+    const requiredFeedback     = requiredPanel?.querySelector("[data-mfa-required-feedback]");
+    const enforcementFeedback  = enforcementPanel?.querySelector("[data-mfa-enforcement-feedback]");
+    const requiredSubmitBtn    = document.getElementById("btn-mfa-required-submit");
+    const requiredSubmitLabel  = document.getElementById("btn-mfa-required-label");
+    const enforcementSubmitBtn   = document.getElementById("btn-mfa-enforcement-submit");
+    const enforcementSubmitLabel = document.getElementById("btn-mfa-enforcement-label");
+    const backToPasswordBtn    = document.getElementById("btn-mfa-required-back");
+
+    const showOnly = (panel) => {
+      [loginForm, requiredPanel, enforcementPanel].forEach((el) => {
+        if (el) el.hidden = el !== panel;
+      });
+    };
+
+    // Estado del intento de login en curso — vive solo en memoria de esta pestaña
+    // mientras se completa el MFA; nunca se guarda en localStorage ni en cookies.
+    let pending = null; // { kind: 'session', session, email } | { kind: 'registration', registrationToken }
+
+    const submitRequiredCode = async (code) => {
+      if (!pending || pending.kind !== "session") return;
+      setButtonLoading(requiredSubmitBtn, requiredSubmitLabel, "Verificando...", "Verificar y entrar", true);
+      if (requiredFeedback) requiredFeedback.textContent = "";
+
+      try {
+        const { ok, data } = await verifyAuthenticator({ session: pending.session, email: pending.email, code });
+        if (ok && data.status === "OK") {
+          completeLogin(data.tokens);
+          return;
+        }
+        requiredOtp?.reset();
+        requiredOtp?.focusFirst();
+        if (requiredFeedback) requiredFeedback.textContent = data.message || "Código incorrecto. Inténtalo de nuevo.";
+      } catch {
+        if (requiredFeedback) requiredFeedback.textContent = "No se pudo conectar con el servidor. Comprueba tu conexión.";
+      } finally {
+        setButtonLoading(requiredSubmitBtn, requiredSubmitLabel, "Verificando...", "Verificar y entrar", false);
+      }
+    };
+
+    const submitEnforcementCode = async (code) => {
+      if (!pending || pending.kind !== "registration") return;
+      setButtonLoading(enforcementSubmitBtn, enforcementSubmitLabel, "Confirmando...", "Confirmar y activar", true);
+      if (enforcementFeedback) enforcementFeedback.textContent = "";
+
+      try {
+        const { ok, data } = await verifyAuthenticator({ registrationToken: pending.registrationToken, code });
+        if (ok && data.status === "OK") {
+          completeLogin(data.tokens);
+          return;
+        }
+        enforcementOtp?.reset();
+        enforcementOtp?.focusFirst();
+        if (enforcementFeedback) enforcementFeedback.textContent = data.message || "Código incorrecto. Inténtalo de nuevo.";
+      } catch {
+        if (enforcementFeedback) enforcementFeedback.textContent = "No se pudo conectar con el servidor. Comprueba tu conexión.";
+      } finally {
+        setButtonLoading(enforcementSubmitBtn, enforcementSubmitLabel, "Confirmando...", "Confirmar y activar", false);
+      }
+    };
+
+    const requiredOtp    = requiredPanel    ? wireOtpInputs(requiredPanel, submitRequiredCode)       : null;
+    const enforcementOtp = enforcementPanel ? wireOtpInputs(enforcementPanel, submitEnforcementCode) : null;
+
+    requiredSubmitBtn?.addEventListener("click", () => {
+      const code = Array.from(requiredPanel.querySelectorAll(".otp-box")).map((box) => box.value).join("");
+      if (code.length === 6) submitRequiredCode(code);
+    });
+
+    enforcementSubmitBtn?.addEventListener("click", () => {
+      const code = Array.from(enforcementPanel.querySelectorAll(".otp-box")).map((box) => box.value).join("");
+      if (code.length === 6) submitEnforcementCode(code);
+    });
+
+    backToPasswordBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      pending = null;
+      requiredOtp?.reset();
+      showOnly(loginForm);
+    });
+
+    const startEnforcementSetup = async (registrationToken) => {
+      pending = { kind: "registration", registrationToken };
+      showOnly(enforcementPanel);
+
+      try {
+        const { ok, data } = await setupAuthenticator({ registrationToken });
+        if (!ok || !data.otpauthUrl) {
+          if (enforcementFeedback) enforcementFeedback.textContent = data.message || "No se pudo generar el código QR. Vuelve a intentarlo.";
+          return;
+        }
+        const canvas = document.getElementById("mfa-qr");
+        if (canvas) await QRCode.toCanvas(canvas, data.otpauthUrl, { width: 176, margin: 1 });
+        const secretEl = document.getElementById("mfa-secret-code");
+        if (secretEl) secretEl.textContent = data.secretCode || "";
+      } catch {
+        if (enforcementFeedback) enforcementFeedback.textContent = "No se pudo conectar con el servidor. Comprueba tu conexión.";
+      }
+    };
+
+    // ── Paso 1: usuario + contraseña ─────────────────────────────────────────
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!validateLoginForm(loginForm)) return;
@@ -784,47 +945,50 @@ import { signIn } from './src/auth/cognito.js';
       setFormFeedback(loginForm, "", "ok");
 
       try {
-        const auth = await cognitoSignIn(email, password);
+        const { ok, status, data } = await login(email, password);
 
-        sessionStorage.setItem(SBA_ID_TOKEN_KEY,      auth.IdToken);
-        sessionStorage.setItem(SBA_ACCESS_TOKEN_KEY,  auth.AccessToken);
-        sessionStorage.setItem(SBA_REFRESH_TOKEN_KEY, auth.RefreshToken);
-
-        // Cookies cross-subdomain para que app.smartbookai.es las lea:
-        //   sba_id_token     → middleware de Next.js (server-side, aws-jwt-verify)
-        //   sba_access_token → /auth/callback (client-side, hidrata localStorage)
-        // En localhost el navegador rechaza una cookie con Domain=smartbookai.es (no coincide
-        // con el host actual), así que en dev se omite y el navegador la asocia al host actual.
-        const isLocalhost = window.location.hostname === "localhost";
-        const cookieBase = isLocalhost
-          ? "Path=/; Max-Age=3600; Secure; SameSite=Strict"
-          : "Domain=smartbookai.es; Path=/; Max-Age=3600; Secure; SameSite=Strict";
-        document.cookie = `sba_id_token=${encodeURIComponent(auth.IdToken)}; ${cookieBase}`;
-        document.cookie = `sba_access_token=${encodeURIComponent(auth.AccessToken)}; ${cookieBase}`;
-
-        window.location.assign(buildCallbackUrl());
-      } catch (err) {
-        switch (err.code) {
-          case "NotAuthorizedException":
-            if (pwdField) pwdField.value = "";
-            setFormFeedback(loginForm, "Correo electrónico o contraseña incorrectos.", "err");
-            break;
-          case "UserNotConfirmedException":
-            setFormFeedback(loginForm, "Debes confirmar tu cuenta antes de acceder. Revisa tu correo.", "err");
-            setTimeout(() => {
-              window.location.assign(`confirm.html?email=${encodeURIComponent(email)}`);
-            }, 2000);
-            break;
-          case "UserNotFoundException":
-            setFormFeedback(loginForm, "No existe una cuenta con ese correo electrónico.", "err");
-            break;
-          case "TooManyRequestsException":
-          case "LimitExceededException":
-            setFormFeedback(loginForm, "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.", "err");
-            break;
-          default:
-            setFormFeedback(loginForm, "No se pudo iniciar sesión. Inténtalo de nuevo en unos minutos.", "err");
+        if (ok && data.status === "OK") {
+          completeLogin(data.tokens);
+          return;
         }
+
+        if (ok && data.status === "MFA_REQUIRED") {
+          pending = { kind: "session", session: data.session, email: data.email };
+          if (requiredEmailEl) requiredEmailEl.textContent = data.email;
+          requiredOtp?.reset();
+          showOnly(requiredPanel);
+          requiredOtp?.focusFirst();
+          return;
+        }
+
+        if (ok && data.status === "MFA_ENFORCEMENT_REQUIRED") {
+          await startEnforcementSetup(data.registrationToken);
+          return;
+        }
+
+        if (status === 403 && data.code === "UNCONFIRMED") {
+          setFormFeedback(loginForm, data.message, "err");
+          setTimeout(() => {
+            window.location.assign(`confirm.html?email=${encodeURIComponent(email)}`);
+          }, 2000);
+          return;
+        }
+        if (status === 401) {
+          if (pwdField) pwdField.value = "";
+          setFormFeedback(loginForm, data.message || "Correo electrónico o contraseña incorrectos.", "err");
+          return;
+        }
+        if (status === 404) {
+          setFormFeedback(loginForm, data.message || "No existe una cuenta con ese correo electrónico.", "err");
+          return;
+        }
+        if (status === 429) {
+          setFormFeedback(loginForm, data.message || "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.", "err");
+          return;
+        }
+        setFormFeedback(loginForm, data.message || "No se pudo iniciar sesión. Inténtalo de nuevo en unos minutos.", "err");
+      } catch {
+        setFormFeedback(loginForm, "No se pudo conectar con el servidor. Comprueba tu conexión.", "err");
       } finally {
         setButtonLoading(submitButton, submitLabel, "Entrando...", "Entrar", false);
       }
