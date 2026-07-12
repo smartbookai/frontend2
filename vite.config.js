@@ -11,6 +11,15 @@ export default defineConfig({
         cpSync(resolve(__dirname, 'rydalca'), resolve(__dirname, 'dist/rydalca'), { recursive: true });
       },
     },
+    {
+      // assets/ (favicons, logos, imágenes) se referencia desde JS con rutas de
+      // texto plano ("assets/logos/x.png"), no con import — Vite no las detecta
+      // por análisis estático y nunca las copiaba a dist/, de ahí los 404 en producción.
+      name: 'copy-assets',
+      closeBundle() {
+        cpSync(resolve(__dirname, 'assets'), resolve(__dirname, 'dist/assets'), { recursive: true });
+      },
+    },
   ],
   build: {
     outDir: 'dist',
