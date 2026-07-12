@@ -1,5 +1,4 @@
 import { login, setupAuthenticator, verifyAuthenticator } from './src/auth/api.js';
-import QRCode from 'qrcode';
 
 (() => {
   "use strict";
@@ -700,7 +699,7 @@ import QRCode from 'qrcode';
   // VITE_APP_URL apunta a sba-frontend (http://localhost:3000 en dev, https://app.smartbookai.es en prod).
   // OJO: no usamos window.location.origin — este script corre en el origen de la landing (frontend2),
   // no en el de la app, así que apuntaría al puerto/dominio equivocado.
-  const APP_CALLBACK_URL    = `${import.meta.env.VITE_APP_URL || 'https://app.smartbookai.es'}/auth/callback`;
+  const APP_CALLBACK_URL    = `${import.meta.env?.VITE_APP_URL || 'https://app.smartbookai.es'}/auth/callback`;
   const ADMIN_GROUP         = "dimiadmin";
   const SBA_ID_TOKEN_KEY      = "sba_id_token";
   const SBA_ACCESS_TOKEN_KEY  = "sba_access_token";
@@ -925,7 +924,10 @@ import QRCode from 'qrcode';
           return;
         }
         const canvas = document.getElementById("mfa-qr");
-        if (canvas) await QRCode.toCanvas(canvas, data.otpauthUrl, { width: 176, margin: 1 });
+        if (canvas) {
+          const { default: QRCode } = await import('qrcode');
+          await QRCode.toCanvas(canvas, data.otpauthUrl, { width: 176, margin: 1 });
+        }
         const secretEl = document.getElementById("mfa-secret-code");
         if (secretEl) secretEl.textContent = data.secretCode || "";
       } catch {

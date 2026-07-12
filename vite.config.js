@@ -1,8 +1,17 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { cpSync } from 'fs';
 
 export default defineConfig({
   root: '.',
+  plugins: [
+    {
+      name: 'copy-rydalca',
+      closeBundle() {
+        cpSync(resolve(__dirname, 'rydalca'), resolve(__dirname, 'dist/rydalca'), { recursive: true });
+      },
+    },
+  ],
   build: {
     outDir: 'dist',
     emptyOutDir: true,
