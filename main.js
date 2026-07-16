@@ -1946,8 +1946,9 @@ import { login, setupAuthenticator, verifyAuthenticator } from './src/auth/api.j
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
-      const nombreReal = sanitizeSingleLine(form.querySelector("#cr-nombre")?.value, 120);
-      const password    = String(form.querySelector("#reg-password")?.value || "");
+      const nombre    = sanitizeSingleLine(form.querySelector("#cr-nombre")?.value, 120);
+      const apellidos = sanitizeSingleLine(form.querySelector("#cr-apellidos")?.value, 120);
+      const password  = String(form.querySelector("#reg-password")?.value || "");
 
       const submitButton = form.querySelector(".auth-form-submit");
       const submitLabel  = submitButton?.querySelector("span");
@@ -1960,8 +1961,8 @@ import { login, setupAuthenticator, verifyAuthenticator } from './src/auth/api.j
 
       clearFormError();
 
-      if (!nombreReal) {
-        showFormError("Introduce tu nombre completo.");
+      if (!nombre || !apellidos) {
+        showFormError("Introduce tu nombre y tus apellidos.");
         return;
       }
       if (!isValidPassword(password)) {
@@ -1975,7 +1976,7 @@ import { login, setupAuthenticator, verifyAuthenticator } from './src/auth/api.j
         const response = await fetch(`${EMPRESAS_API}/completar`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, password, nombreReal }),
+          body: JSON.stringify({ token, password, nombre, apellidos }),
         });
 
         const data = await parseJsonResponse(response);

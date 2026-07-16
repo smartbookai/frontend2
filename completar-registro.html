@@ -58,10 +58,18 @@
           <p id="cr-form-error" class="reg-error" role="alert" aria-live="polite"></p>
 
           <div class="reg-field">
-            <label class="reg-label" for="cr-nombre">Nombre completo *</label>
+            <label class="reg-label" for="cr-nombre">Nombre *</label>
             <div class="input-wrap">
               <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <input class="reg-input" type="text" id="cr-nombre" name="nombreReal" placeholder="Tu nombre y apellidos" autocomplete="name" required maxlength="120" />
+              <input class="reg-input" type="text" id="cr-nombre" name="nombre" placeholder="Tu nombre" autocomplete="given-name" required maxlength="120" />
+            </div>
+          </div>
+
+          <div class="reg-field">
+            <label class="reg-label" for="cr-apellidos">Apellidos *</label>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input class="reg-input" type="text" id="cr-apellidos" name="apellidos" placeholder="Tus apellidos" autocomplete="family-name" required maxlength="120" />
             </div>
           </div>
 
