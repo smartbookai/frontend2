@@ -32,6 +32,7 @@ export default defineConfig({
         planes:        resolve(__dirname, 'planes.html'),
         verificarPago: resolve(__dirname, 'verificar-pago.html'),
         pagoExitoso:   resolve(__dirname, 'pago-exitoso.html'),
+        completarRegistro: resolve(__dirname, 'completar-registro.html'),
         confirm:       resolve(__dirname, 'confirm.html'),
         confirmError:  resolve(__dirname, 'confirm-error.html'),
         contacto:      resolve(__dirname, 'contacto.html'),

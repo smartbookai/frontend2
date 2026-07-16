@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Verificando pago | SmartBook AI</title>
-    <meta name="description" content="Verificando tus datos y redirigiendo a la pasarela de pago segura." />
+    <title>Completa tu registro | SmartBook AI</title>
+    <meta name="description" content="Activa tu cuenta de empleado en SmartBook AI y crea tu contraseña." />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self' https://vmkldqb82b.execute-api.eu-south-2.amazonaws.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; upgrade-insecure-requests"
@@ -26,30 +26,81 @@
       </a>
 
       <!-- Estado de carga (por defecto) -->
-      <div class="vp-card" id="vp-loading" aria-live="polite">
+      <div class="vp-card" id="cr-loading" aria-live="polite">
         <div class="vp-spinner-wrap" aria-hidden="true">
           <div class="vp-spinner"></div>
           <img src="data:image/png;base64,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" alt="" class="vp-spinner-logo" width="36" height="36" />
         </div>
-        <h1 class="vp-title">Verificando tu registro</h1>
-        <p class="vp-sub">Verificando tus datos de registro de forma segura.</p>
-        <p class="vp-sub vp-sub--dim">Redirigiéndote a la pasarela de pago de Stripe&hellip;</p>
-        <div class="vp-stripe-badge" aria-label="Pagos seguros con Stripe">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Pago seguro con Stripe
-        </div>
+        <h1 class="vp-title">Validando tu invitación</h1>
+        <p class="vp-sub">Comprobando el enlace que has recibido por correo.</p>
       </div>
 
       <!-- Estado de error (oculto por defecto) -->
-      <div class="vp-card vp-card--error" id="vp-error" hidden>
+      <div class="vp-card vp-card--error" id="cr-error" hidden>
         <div class="vp-error-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
         <h1 class="vp-title">Enlace no válido</h1>
-        <p class="vp-error-msg" id="vp-error-msg">El enlace ha caducado o no es válido. Los enlaces de verificación expiran a los 15 minutos.</p>
-        <a href="register.html" class="vp-btn-back">
+        <p class="vp-error-msg" id="cr-error-msg">El enlace ha caducado o no es válido. Pide a tu administrador que te reenvíe la invitación.</p>
+        <a href="login.html" class="vp-btn-back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="16" height="16"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          Volver al Registro
+          Ir a iniciar sesión
+        </a>
+      </div>
+
+      <!-- Formulario de activación (oculto hasta validar el token) -->
+      <div class="vp-card" id="cr-form-card" hidden style="text-align: left; align-items: stretch;">
+        <div style="text-align: center;">
+          <h1 class="vp-title">Activa tu cuenta</h1>
+          <p class="vp-sub">Te han invitado a unirte en <strong id="cr-email"></strong></p>
+        </div>
+
+        <form id="form-completar" novalidate style="width: 100%; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 1.1rem;">
+          <p id="cr-form-error" class="reg-error" role="alert" aria-live="polite"></p>
+
+          <div class="reg-field">
+            <label class="reg-label" for="cr-nombre">Nombre completo *</label>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input class="reg-input" type="text" id="cr-nombre" name="nombreReal" placeholder="Tu nombre y apellidos" autocomplete="name" required maxlength="120" />
+            </div>
+          </div>
+
+          <div class="reg-field" id="field-password">
+            <label class="reg-label" for="reg-password">Contraseña *</label>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input class="reg-input" type="password" id="reg-password" name="password" placeholder="Mínimo 12 caracteres" autocomplete="new-password" required minlength="12" maxlength="128" />
+              <button type="button" class="btn-eye" id="btn-eye-cr" aria-label="Mostrar contraseña">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="password-checks" id="password-checks" hidden aria-live="polite">
+              <span class="pw-check" data-rule="length"><span class="pw-dot" aria-hidden="true"></span>Mínimo 12 caracteres</span>
+              <span class="pw-check" data-rule="upper"><span class="pw-dot" aria-hidden="true"></span>Una letra mayúscula (A–Z)</span>
+              <span class="pw-check" data-rule="lower"><span class="pw-dot" aria-hidden="true"></span>Una letra minúscula (a–z)</span>
+              <span class="pw-check" data-rule="number"><span class="pw-dot" aria-hidden="true"></span>Al menos un número (0–9)</span>
+              <span class="pw-check" data-rule="symbol"><span class="pw-dot" aria-hidden="true"></span>Un símbolo (!@#$...)</span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-register auth-form-submit">
+            <span>Activar mi cuenta</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </form>
+      </div>
+
+      <!-- Estado de éxito (oculto hasta completar el registro) -->
+      <div class="vp-card" id="cr-success" hidden>
+        <div class="vp-spinner-wrap" aria-hidden="true" style="border-radius: 50%; background: #f0fdf4; display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <h1 class="vp-title">Cuenta activada</h1>
+        <p class="vp-sub">Ya puedes iniciar sesión con tu correo y tu nueva contraseña.</p>
+        <a href="login.html?registro=ok" class="vp-btn-back">
+          Ir a iniciar sesión
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="16" height="16"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </a>
       </div>
 
