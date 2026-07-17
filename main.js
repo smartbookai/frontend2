@@ -1,4 +1,4 @@
-import { login, setupAuthenticator, verifyAuthenticator } from './src/auth/api.js';
+import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword, restablecerPassword } from './src/auth/api.js';
 
 (() => {
   "use strict";
@@ -841,11 +841,65 @@ import { login, setupAuthenticator, verifyAuthenticator } from './src/auth/api.j
     const enforcementSubmitLabel = document.getElementById("btn-mfa-enforcement-label");
     const backToPasswordBtn    = document.getElementById("btn-mfa-required-back");
 
+    // ── Panel de "olvidé mi contraseña" ───────────────────────────────────────
+    const forgotPanel      = document.getElementById("forgot-password-panel");
+    const forgotSentPanel  = document.getElementById("forgot-password-sent-panel");
+    const forgotFeedback   = forgotPanel?.querySelector("[data-forgot-feedback]");
+    const forgotEmailInput = document.getElementById("forgot-email");
+    const forgotSubmitBtn  = document.getElementById("btn-forgot-submit");
+    const forgotSubmitLabel = document.getElementById("btn-forgot-label");
+    const forgotSentEmailEl = document.getElementById("forgot-sent-email");
+    const forgotTrigger    = document.getElementById("btn-forgot-trigger");
+    const forgotBackBtn    = document.getElementById("btn-forgot-back");
+    const forgotSentBackBtn = document.getElementById("btn-forgot-sent-back");
+
     const showOnly = (panel) => {
-      [loginForm, requiredPanel, enforcementPanel].forEach((el) => {
+      [loginForm, requiredPanel, enforcementPanel, forgotPanel, forgotSentPanel].forEach((el) => {
         if (el) el.hidden = el !== panel;
       });
     };
+
+    forgotTrigger?.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (forgotFeedback) forgotFeedback.textContent = "";
+      if (forgotEmailInput) forgotEmailInput.value = loginForm.querySelector("#login-email")?.value || "";
+      showOnly(forgotPanel);
+    });
+
+    forgotBackBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      showOnly(loginForm);
+    });
+
+    forgotSentBackBtn?.addEventListener("click", (event) => {
+      event.preventDefault();
+      showOnly(loginForm);
+    });
+
+    forgotSubmitBtn?.addEventListener("click", async () => {
+      const email = normalizeEmail(forgotEmailInput?.value);
+      if (!isValidEmail(email)) {
+        if (forgotFeedback) forgotFeedback.textContent = "Introduce un correo electrónico válido.";
+        return;
+      }
+
+      if (forgotFeedback) forgotFeedback.textContent = "";
+      setButtonLoading(forgotSubmitBtn, forgotSubmitLabel, "Enviando...", "Enviar enlace", true);
+
+      try {
+        const { ok, data } = await solicitarResetPassword(email);
+        if (!ok) {
+          if (forgotFeedback) forgotFeedback.textContent = data.message || "No se pudo procesar la solicitud. Inténtalo de nuevo.";
+          return;
+        }
+        if (forgotSentEmailEl) forgotSentEmailEl.textContent = email;
+        showOnly(forgotSentPanel);
+      } catch {
+        if (forgotFeedback) forgotFeedback.textContent = "No se pudo conectar con el servidor. Comprueba tu conexión.";
+      } finally {
+        setButtonLoading(forgotSubmitBtn, forgotSubmitLabel, "Enviando...", "Enviar enlace", false);
+      }
+    });
 
     // Estado del intento de login en curso — vive solo en memoria de esta pestaña
     // mientras se completa el MFA; nunca se guarda en localStorage ni en cookies.
@@ -2056,6 +2110,98 @@ import { login, setupAuthenticator, verifyAuthenticator } from './src/auth/api.j
       });
   };
 
+  // Cablea un botón de ojo (mostrar/ocultar) sobre un campo de contraseña dado.
+  const wirePasswordEye = (eyeBtn, pwdInput) => {
+    if (!eyeBtn || !pwdInput) return;
+    eyeBtn.addEventListener("click", () => {
+      const show = pwdInput.type === "password";
+      pwdInput.type = show ? "text" : "password";
+      eyeBtn.querySelector("svg").innerHTML = show
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+      eyeBtn.setAttribute("aria-label", show ? "Ocultar contraseña" : "Mostrar contraseña");
+    });
+  };
+
+  const initRestablecerPassword = () => {
+    const errorEl   = document.getElementById("rp-error");
+    const errorMsg  = document.getElementById("rp-error-msg");
+    const formCard  = document.getElementById("rp-form-card");
+    const successEl = document.getElementById("rp-success");
+    const form      = document.getElementById("form-restablecer");
+    if (!errorEl || !formCard || !form) return;
+
+    const token = new URLSearchParams(window.location.search).get("token");
+
+    if (!token) {
+      formCard.hidden = true;
+      if (errorMsg) errorMsg.textContent = "El enlace no contiene un token válido. Solicita uno nuevo desde la pantalla de inicio de sesión.";
+      errorEl.hidden = false;
+      return;
+    }
+
+    initPasswordChecks();
+    wirePasswordEye(document.getElementById("btn-eye-rp"), document.getElementById("reg-password"));
+    wirePasswordEye(document.getElementById("btn-eye-rp-confirm"), document.getElementById("rp-password-confirm"));
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const password        = String(form.querySelector("#reg-password")?.value || "");
+      const passwordConfirm = String(form.querySelector("#rp-password-confirm")?.value || "");
+
+      const submitButton = form.querySelector(".auth-form-submit");
+      const submitLabel  = submitButton?.querySelector("span");
+      const feedbackEl   = document.getElementById("rp-form-error");
+
+      const showFormError  = (msg) => { if (feedbackEl) feedbackEl.textContent = msg; };
+      const clearFormError = ()    => { if (feedbackEl) feedbackEl.textContent = ""; };
+
+      const SERVER_ERROR_MSG = "Ha ocurrido un problema en nuestros servidores en España, por favor inténtelo de nuevo en unos minutos.";
+
+      clearFormError();
+
+      if (!isValidPassword(password)) {
+        showFormError("La contraseña no cumple los requisitos de seguridad. Revisa que tenga al menos 12 caracteres, una mayúscula, una minúscula, un número y un símbolo.");
+        return;
+      }
+      if (password !== passwordConfirm) {
+        showFormError("Las dos contraseñas no coinciden.");
+        return;
+      }
+
+      setButtonLoading(submitButton, submitLabel, "Restableciendo...", "Restablecer contraseña", true);
+
+      try {
+        const { ok, status, data } = await restablecerPassword(token, password);
+
+        if (ok) {
+          formCard.hidden = true;
+          if (successEl) successEl.hidden = false;
+          return;
+        }
+
+        if (status === 404 || status === 410) {
+          formCard.hidden = true;
+          if (errorMsg) errorMsg.textContent = data.message || "El enlace no es válido o ya ha sido utilizado.";
+          errorEl.hidden = false;
+          return;
+        }
+
+        if (status >= 500) {
+          showFormError(SERVER_ERROR_MSG);
+          return;
+        }
+
+        showFormError(responseErrorMessage(data, "No se pudo restablecer la contraseña. Inténtalo de nuevo."));
+      } catch {
+        showFormError(SERVER_ERROR_MSG);
+      } finally {
+        setButtonLoading(submitButton, submitLabel, "Restableciendo...", "Restablecer contraseña", false);
+      }
+    });
+  };
+
   setNavbarState();
   initRevealAnimations();
   initLogoMarquee();
@@ -2075,4 +2221,5 @@ import { login, setupAuthenticator, verifyAuthenticator } from './src/auth/api.j
   initVerificarPago();
   initPagoExitoso();
   initCompletarRegistro();
+  initRestablecerPassword();
 })();

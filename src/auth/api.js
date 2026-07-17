@@ -31,3 +31,13 @@ export const setupAuthenticator = ({ registrationToken }) =>
  * En ambos casos, éxito devuelve { status: 'OK', tokens }.
  */
 export const verifyAuthenticator = (payload) => postJson("/auth/mfa/verify", payload);
+
+/**
+ * POST /auth/olvide-password — siempre responde 200 con el mismo mensaje
+ * genérico, exista o no la cuenta (el backend decide en silencio si manda
+ * el correo). Nunca hay nada que distinguir aquí por status.
+ */
+export const solicitarResetPassword = (email) => postJson("/auth/olvide-password", { email });
+
+/** POST /auth/restablecer-password — canjea el token del correo con la contraseña nueva. */
+export const restablecerPassword = (token, password) => postJson("/auth/restablecer-password", { token, password });
