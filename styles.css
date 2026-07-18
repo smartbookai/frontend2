@@ -5874,6 +5874,16 @@ body.register-page {
 
 .reg-error:not(:empty) { display: block; }
 
+/* Variante de éxito (banner "cuenta creada", confirmaciones de formulario...) —
+   antes esta clase se añadía pero no tenía ningún estilo propio, así que
+   los mensajes "ok" salían igual de rojos que los de error. */
+.reg-error.ok {
+  font-size: 0.92rem;
+  color: #15803d;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
 .btn-register {
   width: 100%;
   height: 48px;

@@ -24,6 +24,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    // Por defecto Vite incrusta como data: URI cualquier imagen referenciada en
+    // el HTML que pese menos de 4KB (favicon.png son 2959 bytes) — sustituye el
+    // <img src="assets/favicon.png"> por un base64 en el propio HTML. Nuestro
+    // CSP es estricto (img-src 'self', sin data:) así que el navegador lo
+    // bloquea: el archivo cargaba bien solo, pero la referencia real de la
+    // página apuntaba a otra cosa. 0 = nunca incrustar, siempre URL de archivo real.
+    assetsInlineLimit: 0,
     rollupOptions: {
       input: {
         index:         resolve(__dirname, 'index.html'),
