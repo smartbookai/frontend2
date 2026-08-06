@@ -1,4 +1,4 @@
-import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword, restablecerPassword } from './src/auth/api.js';
+import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword, restablecerPassword, loginConGoogle, enviarCodigoSms, verificarCodigoSms } from './src/auth/api.js';
 
 (() => {
   "use strict";
@@ -706,6 +706,72 @@ import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword,
   const SBA_REFRESH_TOKEN_KEY = "sba_refresh_token";
   // ─────────────────────────────────────────────────────────────────────────
 
+  // ── Login/registro con Google (Cognito Hosted UI) ──────────────────────────
+  // El dominio Hosted UI no es sensible (va en cada URL de redirección); el
+  // client ID sí es específico del entorno, así que viene de .env (VITE_GOOGLE_CLIENT_ID),
+  // nunca hardcodeado ni comentado en el repo. Todo el intercambio del "code"
+  // por tokens ocurre en el backend (POST /auth/login) — el navegador nunca
+  // habla con Cognito directamente salvo para esta navegación de página completa.
+  const GOOGLE_OAUTH_DOMAIN    = "https://smartbookai-auth.auth.eu-south-2.amazoncognito.com";
+  const GOOGLE_OAUTH_CLIENT_ID = import.meta.env?.VITE_GOOGLE_CLIENT_ID || "";
+  const GOOGLE_STATE_KEY       = "sba_google_oauth_state";
+
+  const startGoogleAuth = () => {
+    if (!GOOGLE_OAUTH_CLIENT_ID) {
+      console.error("Falta VITE_GOOGLE_CLIENT_ID — el botón de Google no puede continuar.");
+      return;
+    }
+    const redirectUri = `${window.location.origin}${window.location.pathname}`;
+    const state = crypto.randomUUID();
+    sessionStorage.setItem(GOOGLE_STATE_KEY, state);
+
+    const url = new URL("/oauth2/authorize", GOOGLE_OAUTH_DOMAIN);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("client_id", GOOGLE_OAUTH_CLIENT_ID);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("identity_provider", "Google");
+    url.searchParams.set("scope", "openid email profile");
+    url.searchParams.set("state", state);
+    window.location.assign(url.toString());
+  };
+
+  // Al volver de Google, Cognito añade ?code=&state= a la propia página (login.html
+  // o register.html) — se limpia la URL de inmediato para no dejar el code visible
+  // en el historial, y se valida el state guardado antes de canjearlo.
+  const consumeGoogleCallback = () => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state");
+    if (!code || !state) return null;
+
+    const redirectUri = `${window.location.origin}${window.location.pathname}`;
+    const expected = sessionStorage.getItem(GOOGLE_STATE_KEY);
+    sessionStorage.removeItem(GOOGLE_STATE_KEY);
+    window.history.replaceState(null, "", window.location.pathname);
+
+    if (!expected || state !== expected) return null;
+    return { code, redirectUri };
+  };
+
+  // Contraseña aleatoria para las cuentas creadas vía Google: nunca se muestra
+  // ni se necesita (esa cuenta siempre entra por el botón de Google), pero
+  // Cognito exige una al crear el usuario — así solicitar-registro.ts y el resto
+  // del flujo de pago no necesitan saber que el origen fue Google.
+  const generarPasswordAleatoria = () => {
+    const grupos = ["ABCDEFGHJKLMNPQRSTUVWXYZ", "abcdefghijkmnpqrstuvwxyz", "23456789", "!@#$%^&*-_=+"];
+    const azar = (charset, n) => {
+      const valores = new Uint32Array(n);
+      crypto.getRandomValues(valores);
+      return Array.from(valores, (v) => charset[v % charset.length]).join("");
+    };
+    const caracteres = (grupos.map((g) => azar(g, 1)).join("") + azar(grupos.join(""), 20)).split("");
+    for (let i = caracteres.length - 1; i > 0; i--) {
+      const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+      [caracteres[i], caracteres[j]] = [caracteres[j], caracteres[i]];
+    }
+    return caracteres.join("");
+  };
+
   const decodeJwtPayload = (token) => {
     try {
       const base64Url = String(token || "").split(".")[1] || "";
@@ -756,6 +822,7 @@ import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword,
       : "Domain=smartbookai.es; Path=/; Max-Age=3600; Secure; SameSite=Strict";
     document.cookie = `sba_id_token=${encodeURIComponent(tokens.IdToken)}; ${cookieBase}`;
     document.cookie = `sba_access_token=${encodeURIComponent(tokens.AccessToken)}; ${cookieBase}`;
+    document.cookie = `sba_refresh_token=${encodeURIComponent(tokens.RefreshToken)}; ${cookieBase}`;
 
     window.location.assign(buildCallbackUrl());
   };
@@ -989,6 +1056,34 @@ import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword,
       }
     };
 
+    // ── Google ────────────────────────────────────────────────────────────────
+    const googleBtn = document.getElementById("btn-google-login");
+    googleBtn?.addEventListener("click", () => startGoogleAuth());
+
+    const googleReturn = consumeGoogleCallback();
+    if (googleReturn) {
+      setButtonLoading(submitButton, submitLabel, "Verificando con Google...", "Entrar", true);
+      (async () => {
+        try {
+          const { ok, data } = await loginConGoogle(googleReturn.code, googleReturn.redirectUri);
+
+          if (ok && data.status === "OK") {
+            completeLogin(data.tokens);
+            return;
+          }
+          if (ok && data.status === "MFA_ENFORCEMENT_REQUIRED") {
+            await startEnforcementSetup(data.registrationToken);
+            return;
+          }
+          setFormFeedback(loginForm, data.message || "No se pudo iniciar sesión con Google. Inténtalo de nuevo.", "err");
+        } catch {
+          setFormFeedback(loginForm, "No se pudo conectar con el servidor. Comprueba tu conexión.", "err");
+        } finally {
+          setButtonLoading(submitButton, submitLabel, "Verificando con Google...", "Entrar", false);
+        }
+      })();
+    }
+
     // ── Paso 1: usuario + contraseña ─────────────────────────────────────────
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -1191,6 +1286,53 @@ import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword,
         setFormFeedback(registerForm, "", "ok");
       }
     });
+
+    // ── Google ────────────────────────────────────────────────────────────────
+    // Google solo verifica el correo — el pago sigue exactamente el mismo camino
+    // de siempre (plan → Stripe → el webhook crea la cuenta). Al volver, se
+    // bloquea el email al que Google ya dio fe y se rellena una contraseña
+    // aleatoria que el usuario nunca necesitará (siempre entrará por Google).
+    const googleRegisterBtn = document.getElementById("btn-google-register");
+    googleRegisterBtn?.addEventListener("click", () => startGoogleAuth());
+
+    const googleReturn = consumeGoogleCallback();
+    if (googleReturn) {
+      const errorEl = document.getElementById("registro-error");
+      const emailInput = registerForm.querySelector("#reg-email");
+      const passwordField = document.getElementById("field-password");
+      const passwordInput = registerForm.querySelector("#reg-password");
+
+      const showGoogleFeedback = (message, ok) => {
+        if (!errorEl) return;
+        errorEl.textContent = message;
+        errorEl.classList.toggle("ok", ok);
+      };
+
+      showGoogleFeedback("Verificando tu cuenta de Google...", false);
+
+      (async () => {
+        try {
+          const { ok, data } = await loginConGoogle(googleReturn.code, googleReturn.redirectUri);
+          if (!ok || !data.email) {
+            showGoogleFeedback(data.message || "No se pudo verificar la cuenta de Google. Inténtalo de nuevo.", false);
+            return;
+          }
+
+          if (emailInput) {
+            emailInput.value = data.email;
+            emailInput.readOnly = true;
+          }
+          if (passwordField) passwordField.hidden = true;
+          if (passwordInput) {
+            passwordInput.required = false;
+            passwordInput.value = generarPasswordAleatoria();
+          }
+          showGoogleFeedback(`Cuenta de Google verificada: ${data.email}`, true);
+        } catch {
+          showGoogleFeedback("No se pudo conectar con el servidor. Comprueba tu conexión.", false);
+        }
+      })();
+    }
 
     registerForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -2002,6 +2144,7 @@ import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword,
 
       const nombre    = sanitizeSingleLine(form.querySelector("#cr-nombre")?.value, 120);
       const apellidos = sanitizeSingleLine(form.querySelector("#cr-apellidos")?.value, 120);
+      const telefono  = sanitizeSingleLine(form.querySelector("#cr-telefono")?.value, 30);
       const password  = String(form.querySelector("#reg-password")?.value || "");
 
       const submitButton = form.querySelector(".auth-form-submit");
@@ -2019,6 +2162,10 @@ import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword,
         showFormError("Introduce tu nombre y tus apellidos.");
         return;
       }
+      if (!/^\+?[0-9 ]{9,20}$/.test(telefono)) {
+        showFormError("Introduce un teléfono móvil válido — lo necesitamos para el SMS de seguridad al restablecer tu contraseña.");
+        return;
+      }
       if (!isValidPassword(password)) {
         showFormError("La contraseña no cumple los requisitos de seguridad. Revisa que tenga al menos 12 caracteres, una mayúscula, una minúscula, un número y un símbolo.");
         return;
@@ -2030,7 +2177,7 @@ import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword,
         const response = await fetch(`${EMPRESAS_API}/completar`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, password, nombre, apellidos }),
+          body: JSON.stringify({ token, password, nombre, apellidos, telefono }),
         });
 
         const data = await parseJsonResponse(response);
@@ -2124,25 +2271,143 @@ import { login, setupAuthenticator, verifyAuthenticator, solicitarResetPassword,
   };
 
   const initRestablecerPassword = () => {
-    const errorEl   = document.getElementById("rp-error");
-    const errorMsg  = document.getElementById("rp-error-msg");
-    const formCard  = document.getElementById("rp-form-card");
-    const successEl = document.getElementById("rp-success");
-    const form      = document.getElementById("form-restablecer");
-    if (!errorEl || !formCard || !form) return;
+    const loadingEl      = document.getElementById("rp-loading");
+    const errorEl        = document.getElementById("rp-error");
+    const errorMsg       = document.getElementById("rp-error-msg");
+    const smsEl          = document.getElementById("rp-sms");
+    const smsSub         = document.getElementById("rp-sms-sub");
+    const smsForm        = document.getElementById("form-sms");
+    const smsCountdownEl = document.getElementById("rp-sms-countdown");
+    const formCard       = document.getElementById("rp-form-card");
+    const successEl      = document.getElementById("rp-success");
+    const form           = document.getElementById("form-restablecer");
+    if (!loadingEl || !errorEl || !smsEl || !smsForm || !formCard || !form) return;
 
     const token = new URLSearchParams(window.location.search).get("token");
 
-    if (!token) {
+    const showError = (msg) => {
+      loadingEl.hidden = true;
+      smsEl.hidden = true;
       formCard.hidden = true;
-      if (errorMsg) errorMsg.textContent = "El enlace no contiene un token válido. Solicita uno nuevo desde la pantalla de inicio de sesión.";
+      if (errorMsg) errorMsg.textContent = msg;
       errorEl.hidden = false;
+    };
+
+    if (!token) {
+      showError("El enlace no contiene un token válido. Solicita uno nuevo desde la pantalla de inicio de sesión.");
       return;
     }
 
     initPasswordChecks();
     wirePasswordEye(document.getElementById("btn-eye-rp"), document.getElementById("reg-password"));
     wirePasswordEye(document.getElementById("btn-eye-rp-confirm"), document.getElementById("rp-password-confirm"));
+
+    // El código SMS caduca a los 15 min — cuenta atrás puramente informativa,
+    // el backend es quien de verdad rechaza un código caducado.
+    let smsCountdownTimer = null;
+    const startSmsCountdown = () => {
+      if (smsCountdownTimer) clearInterval(smsCountdownTimer);
+      let restanteSeg = 15 * 60;
+      const tick = () => {
+        const minutos = Math.floor(restanteSeg / 60);
+        const segundos = restanteSeg % 60;
+        if (smsCountdownEl) {
+          smsCountdownEl.textContent = restanteSeg > 0
+            ? `El código caduca en ${minutos}:${String(segundos).padStart(2, "0")}`
+            : 'El código ha caducado. Pulsa "Reenviar código".';
+        }
+        if (restanteSeg <= 0) {
+          clearInterval(smsCountdownTimer);
+          return;
+        }
+        restanteSeg -= 1;
+      };
+      tick();
+      smsCountdownTimer = setInterval(tick, 1000);
+    };
+
+    // Dispara el envío del SMS — también sirve para "Reenviar código". El
+    // propio token identifica la solicitud (no hay sesión todavía).
+    const enviarSms = async () => {
+      loadingEl.hidden = false;
+      smsEl.hidden = true;
+      formCard.hidden = true;
+      errorEl.hidden = true;
+
+      const { ok, status, data } = await enviarCodigoSms(token);
+
+      loadingEl.hidden = true;
+
+      if (ok) {
+        if (smsSub) smsSub.textContent = `Te hemos enviado un código por SMS a ${data.telefonoEnmascarado || "tu teléfono"}.`;
+        smsEl.hidden = false;
+        startSmsCountdown();
+        return;
+      }
+
+      if (status === 404 || status === 410) {
+        showError(data.message || "El enlace no es válido o ya ha sido utilizado.");
+        return;
+      }
+
+      showError(data.message || "No se ha podido enviar el código por SMS. Inténtalo de nuevo más tarde.");
+    };
+
+    smsForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const codigo        = String(smsForm.querySelector("#rp-sms-codigo")?.value || "").trim();
+      const submitButton  = smsForm.querySelector(".auth-form-submit");
+      const submitLabel   = submitButton?.querySelector("span");
+      const feedbackEl    = document.getElementById("rp-sms-error");
+
+      const showSmsError  = (msg) => { if (feedbackEl) feedbackEl.textContent = msg; };
+      const clearSmsError = ()    => { if (feedbackEl) feedbackEl.textContent = ""; };
+
+      const SERVER_ERROR_MSG = "Ha ocurrido un problema en nuestros servidores en España, por favor inténtelo de nuevo en unos minutos.";
+
+      clearSmsError();
+
+      if (!/^[0-9]{6}$/.test(codigo)) {
+        showSmsError("Introduce el código de 6 dígitos que te hemos enviado.");
+        return;
+      }
+
+      setButtonLoading(submitButton, submitLabel, "Verificando...", "Verificar código", true);
+
+      try {
+        const { ok, status, data } = await verificarCodigoSms(token, codigo);
+
+        if (ok) {
+          if (smsCountdownTimer) clearInterval(smsCountdownTimer);
+          smsEl.hidden = true;
+          formCard.hidden = false;
+          return;
+        }
+
+        if (status === 404 || status === 410) {
+          showError(data.message || "El enlace no es válido o ya ha sido utilizado.");
+          return;
+        }
+
+        if (status >= 500) {
+          showSmsError(SERVER_ERROR_MSG);
+          return;
+        }
+
+        showSmsError(responseErrorMessage(data, "Código incorrecto. Inténtalo de nuevo."));
+      } catch {
+        showSmsError(SERVER_ERROR_MSG);
+      } finally {
+        setButtonLoading(submitButton, submitLabel, "Verificando...", "Verificar código", false);
+      }
+    });
+
+    document.getElementById("btn-sms-reenviar")?.addEventListener("click", () => {
+      enviarSms();
+    });
+
+    enviarSms();
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();

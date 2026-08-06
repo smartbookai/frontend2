@@ -5397,7 +5397,6 @@ body.register-page {
   position: relative;
   z-index: 1;
   display: inline-block;
-  margin-bottom: auto;
 }
 
 .register-logo img { display: block; }

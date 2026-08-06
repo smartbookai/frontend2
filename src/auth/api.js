@@ -18,6 +18,16 @@ const postJson = async (path, body) => {
 export const login = (email, password) => postJson("/auth/login", { email, password });
 
 /**
+ * POST /auth/login — misma ruta, pero con el "code" de Google en vez de
+ * contraseña. El backend canjea el code, aplica el mismo filtro de MFA que un
+ * login por contraseña, y devuelve además el email verificado (útil para
+ * register.html, que no está "iniciando sesión" sino solo comprobando el
+ * correo antes de pagar).
+ */
+export const loginConGoogle = (googleCode, googleRedirectUri) =>
+  postJson("/auth/login", { googleCode, googleRedirectUri });
+
+/**
  * POST /auth/mfa/setup — genera un secreto TOTP nuevo.
  * Solo cuando el login respondió MFA_ENFORCEMENT_REQUIRED: { registrationToken }.
  */
@@ -41,3 +51,16 @@ export const solicitarResetPassword = (email) => postJson("/auth/olvide-password
 
 /** POST /auth/restablecer-password — canjea el token del correo con la contraseña nueva. */
 export const restablecerPassword = (token, password) => postJson("/auth/restablecer-password", { token, password });
+
+/**
+ * POST /auth/restablecer-password/enviar-sms — segundo factor del propio
+ * "olvidé mi contraseña". Manda un código de 6 dígitos al móvil asociado a la
+ * cuenta y devuelve el teléfono enmascarado para mostrarlo en pantalla.
+ */
+export const enviarCodigoSms = (token) => postJson("/auth/restablecer-password/enviar-sms", { token });
+
+/**
+ * POST /auth/restablecer-password/verificar-sms — canjea el código de 6
+ * dígitos. Solo tras esto acepta restablecerPassword() el cambio de contraseña.
+ */
+export const verificarCodigoSms = (token, codigo) => postJson("/auth/restablecer-password/verificar-sms", { token, codigo });
